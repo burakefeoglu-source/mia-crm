@@ -125,26 +125,26 @@ export function DashboardClient({
         </div>
       </div>
 
-      <div className="w-[230px] shrink-0 bg-white border border-black/5 rounded-xl p-4 flex flex-col gap-5 h-fit">
+      <div className="w-[260px] shrink-0 bg-white border border-black/5 rounded-2xl p-5 flex flex-col gap-6 h-fit shadow-sm">
         <MiniCalendar markedDates={markedDates} />
 
-        <div className="h-px bg-black/5" />
+        <div className="h-px bg-black/[0.06]" />
 
         <div>
-          <div className="text-xs font-medium mb-2">Şu an ne yapıyor</div>
-          <div className="flex flex-col gap-2">
+          <div className="text-xs font-medium text-black/70 mb-3">Şu an ne yapıyor</div>
+          <div className="flex flex-col gap-3">
             {activeNow.map((m) => (
-              <div key={m.id} className="flex items-center gap-2">
+              <div key={m.id} className="flex items-center gap-2.5">
                 <div
-                  className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-medium shrink-0 ${
-                    m.task_title ? "bg-mia-light text-mia" : "bg-black/5 text-black/40"
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-medium shrink-0 ${
+                    m.task_title ? "bg-mia-light text-mia" : "bg-black/[0.04] text-black/35"
                   }`}
                 >
                   {initials(m.name)}
                 </div>
                 <div className="min-w-0">
-                  <div className="text-[11px] font-medium">{m.name}</div>
-                  <div className="text-[10px] text-black/50 truncate">
+                  <div className="text-[12px] font-medium text-black/80 truncate">{m.name}</div>
+                  <div className="text-[11px] text-black/40 truncate">
                     {m.task_title ? `${m.task_title}${m.client_name ? " · " + m.client_name : ""}` : "Boşta"}
                   </div>
                 </div>
@@ -154,16 +154,19 @@ export function DashboardClient({
           </div>
         </div>
 
-        <div className="h-px bg-black/5" />
+        <div className="h-px bg-black/[0.06]" />
 
         <div>
-          <div className="text-xs font-medium mb-2">Notlar</div>
-          <div className="flex flex-col gap-1.5 mb-2">
+          <div className="text-xs font-medium text-black/70 mb-3">Notlar</div>
+          <div className="flex flex-col gap-2 mb-3">
             {notes.map((n) => (
-              <div key={n.id} className="bg-black/[0.03] rounded-lg p-2 text-[11px] text-black/70">
+              <div key={n.id} className="bg-black/[0.03] rounded-xl px-3 py-2.5 text-[11px] text-black/65 leading-relaxed">
                 {n.content}
               </div>
             ))}
+            {!notes.length && (
+              <div className="text-[11px] text-black/30">Henüz not yok.</div>
+            )}
           </div>
           <div className="flex gap-1.5">
             <input
@@ -171,12 +174,12 @@ export function DashboardClient({
               onChange={(e) => setNoteText(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && submitNote()}
               placeholder="Not ekle…"
-              className="flex-1 min-w-0 border border-black/10 rounded-lg px-2 py-1.5 text-[11px] outline-none focus:border-mia"
+              className="flex-1 min-w-0 border border-black/10 rounded-lg px-2.5 py-2 text-[11px] outline-none focus:border-mia"
             />
             <button
               onClick={submitNote}
               disabled={pending}
-              className="text-[11px] bg-mia text-white px-2 rounded-lg disabled:opacity-50"
+              className="text-[11px] font-medium bg-mia text-white px-3 rounded-lg disabled:opacity-50 shrink-0"
             >
               Ekle
             </button>
