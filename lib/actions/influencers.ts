@@ -2,7 +2,6 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 
 export async function createInfluencerAction(formData: FormData) {
   const supabase = createClient();
@@ -19,9 +18,7 @@ export async function createInfluencerAction(formData: FormData) {
   });
 
   if (error) throw new Error(error.message);
-
   revalidatePath("/influencers");
-  redirect("/influencers");
 }
 
 export async function createCampaignAction(formData: FormData) {
@@ -56,6 +53,5 @@ export async function createCampaignAction(formData: FormData) {
     if (e1) throw new Error(e1.message);
   }
 
-  revalidatePath("/campaigns");
-  redirect("/campaigns");
+  revalidatePath("/influencers");
 }

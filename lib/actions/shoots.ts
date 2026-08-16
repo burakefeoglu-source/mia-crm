@@ -2,7 +2,6 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 
 export async function createShootAction(formData: FormData) {
   const supabase = createClient();
@@ -13,11 +12,13 @@ export async function createShootAction(formData: FormData) {
   const { data: shoot, error } = await supabase
     .from("shoots")
     .insert({
+      title: (formData.get("title") as string) || null,
       shoot_date: formData.get("shoot_date") as string,
       start_time: formData.get("start_time") as string,
       end_time: formData.get("end_time") as string,
-      location: formData.get("location") as string,
+      location: (formData.get("location") as string) || null,
       shoot_type: formData.get("shoot_type") as string,
+      is_outdoor: formData.get("is_outdoor") === "on",
       notes: (formData.get("notes") as string) || null,
     })
     .select()
@@ -41,5 +42,4 @@ export async function createShootAction(formData: FormData) {
 
   revalidatePath("/calendar");
   revalidatePath("/dashboard");
-  redirect("/calendar");
 }

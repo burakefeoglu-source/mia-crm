@@ -1,93 +1,81 @@
 import { createClient } from "@/lib/supabase/server";
-import { StatusBadge } from "@/components/StatusBadge";
-import { IconPlus } from "@tabler/icons-react";
-import Link from "next/link";
-import type { Task } from "@/lib/supabase/types";
+import { DashboardClient } from "@/components/DashboardClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const supabase = createClient();
   const today = new Date().toISOString().slice(0, 10);
+  const nowTime = new Date().toTimeString().slice(0, 8);
 
-  const { data: tasks } = await supabase
+  const { data: todayTasks } = await supabase
     .from("tasks")
-    .select("*, clients(name), team_members(name)")
+    .select("*, clients(name), task_assignees(team_members(name))")
     .eq("task_date", today)
     .order("start_time");
 
-  const { data: shoots } = await supabase
+  const { data: upcomingShoots } = await supabase
     .from("shoots")
     .select("*")
     .gte("shoot_date", today)
     .order("shoot_date")
     .limit(3);
 
+  const { data: clients } = await supabase.from("clients").select("id, name").order("name");
+  const { data: members } = await supabase.from("team_members").select("id, name").order("name");
+  const { data: notes } = await supabase
+    .from("notes")
+    .select("id, content")
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  // Ay için işaretli tarihler (görev veya çekim olan günler)
+  const monthStart = today.slice(0, 8) + "01";
+  const { data: monthTasks } = await supabase
+    .from("tasks")
+    .select("task_date")
+    .gte("task_date", monthStart);
+  const { data: monthShoots } = await supabase
+    .from("shoots")
+    .select("shoot_date")
+    .gte("shoot_date", monthStart);
+  const markedDates = Array.from(
+    new Set([
+      ...(monthTasks?.map((t) => t.task_date) ?? []),
+      ...(monthShoots?.map((s) => s.shoot_date) ?? []),
+    ])
+  );
+
+  // Şu an ne yapıyor: bugün, saat aralığına giren görevi olan kişiler
+  const activeNow = (members ?? []).map((m) => {
+    const activeTask = (todayTasks ?? []).find((t: any) => {
+      const assignees = t.task_assignees?.map((a: any) => a.team_members?.name) ?? [];
+      if (!assignees.includes(m.name)) return false;
+      const start = t.start_time;
+      const [h, min] = start.split(":").map(Number);
+      const endMinutes = h * 60 + min + t.duration_minutes;
+      const [nh, nmin] = nowTime.split(":").map(Number);
+      const nowMinutes = nh * 60 + nmin;
+      const startMinutes = h * 60 + min;
+      return nowMinutes >= startMinutes && nowMinutes <= endMinutes;
+    });
+    return {
+      id: m.id,
+      name: m.name,
+      task_title: activeTask?.title ?? null,
+      client_name: (activeTask as any)?.clients?.name ?? null,
+    };
+  });
+
   return (
-    <div>
-      <h1 className="font-display text-2xl font-medium mb-1">Bugün ne çekiyoruz?</h1>
-      <p className="text-sm text-black/50 mb-6">
-        Görevleri ve çekimleri tek yerden takip et.
-      </p>
-
-      <Link
-        href="/tasks/new"
-        className="flex items-center gap-1.5 bg-mia text-white text-sm font-medium px-4 py-2.5 rounded-lg mb-8"
-      >
-        <IconPlus size={16} />
-        Yeni görev ekle
-      </Link>
-
-      <h2 className="text-sm font-medium mb-3">Bugünün görevleri</h2>
-      <div className="bg-white border border-black/5 rounded-xl overflow-hidden mb-8">
-        {(tasks as (Task & { clients: { name: string } | null; team_members: { name: string } | null })[] | null)
-          ?.length ? (
-          tasks!.map((task: any) => (
-            <div
-              key={task.id}
-              className="flex items-center justify-between px-4 py-3 border-b border-black/5 last:border-0"
-            >
-              <div>
-                <div className="text-sm font-medium">
-                  {task.title} {task.clients?.name && `— ${task.clients.name}`}
-                </div>
-                <div className="text-xs text-black/50">
-                  {task.team_members?.name ?? "Atanmadı"} · {task.start_time?.slice(0, 5)}
-                </div>
-              </div>
-              <StatusBadge status={task.status} />
-            </div>
-          ))
-        ) : (
-          <div className="px-4 py-6 text-sm text-black/40 text-center">
-            Bugün için görev yok.
-          </div>
-        )}
-      </div>
-
-      <h2 className="text-sm font-medium mb-3">Yaklaşan çekimler</h2>
-      <div className="flex flex-col gap-2">
-        {shoots?.length ? (
-          shoots.map((shoot) => (
-            <div
-              key={shoot.id}
-              className="flex items-center gap-3 bg-white border border-black/5 rounded-lg px-4 py-3"
-            >
-              <div>
-                <div className="text-sm font-medium capitalize">
-                  {shoot.shoot_type === "video" ? "Video" : "Foto"} çekimi
-                  {shoot.location && ` — ${shoot.location}`}
-                </div>
-                <div className="text-xs text-black/50">
-                  {shoot.shoot_date} · {shoot.start_time?.slice(0, 5)}
-                </div>
-              </div>
-            </div>
-          ))
-        ) : (
-          <div className="text-sm text-black/40">Planlanmış çekim yok.</div>
-        )}
-      </div>
-    </div>
+    <DashboardClient
+      todayTasks={todayTasks ?? []}
+      upcomingShoots={upcomingShoots ?? []}
+      clients={clients ?? []}
+      members={members ?? []}
+      activeNow={activeNow}
+      notes={notes ?? []}
+      markedDates={markedDates}
+    />
   );
 }

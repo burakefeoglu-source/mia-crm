@@ -2,21 +2,31 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 
 export async function createClientAction(formData: FormData) {
   const supabase = createClient();
+
+  const colorsRaw = formData.get("brand_colors") as string;
+  const brandColors = colorsRaw
+    ? colorsRaw.split(",").map((c) => c.trim()).filter(Boolean)
+    : null;
 
   const { error } = await supabase.from("clients").insert({
     name: formData.get("name") as string,
     sector: formData.get("sector") as string,
     is_active: true,
+    drive_url: (formData.get("drive_url") as string) || null,
+    address: (formData.get("address") as string) || null,
+    logo_url: (formData.get("logo_url") as string) || null,
+    brand_colors: brandColors,
+    brand_fonts: (formData.get("brand_fonts") as string) || null,
+    brand_guide_url: (formData.get("brand_guide_url") as string) || null,
+    instagram_handle: (formData.get("instagram_handle") as string) || null,
+    tiktok_handle: (formData.get("tiktok_handle") as string) || null,
   });
 
   if (error) throw new Error(error.message);
-
   revalidatePath("/clients");
-  redirect("/clients");
 }
 
 export async function createTeamMemberAction(formData: FormData) {
@@ -26,33 +36,61 @@ export async function createTeamMemberAction(formData: FormData) {
     name: formData.get("name") as string,
     role: formData.get("role") as string,
     email: formData.get("email") as string,
+    phone: (formData.get("phone") as string) || null,
+    avatar_url: (formData.get("avatar_url") as string) || null,
   });
 
   if (error) throw new Error(error.message);
-
   revalidatePath("/team");
-  redirect("/team");
 }
+
+const DURATION_PRESET_MINUTES: Record<string, number> = {
+  half_day: 240,
+  full_day: 480,
+  two_days: 960,
+};
 
 export async function createTaskAction(formData: FormData) {
   const supabase = createClient();
 
   const clientId = formData.get("client_id") as string;
-  const assignedTo = formData.get("assigned_to") as string;
+  const assigneeIds = formData.getAll("assignee_ids") as string[];
+  const durationPreset = (formData.get("duration_preset") as string) || "custom";
+  const customMinutes = Number(formData.get("duration_minutes")) || 60;
+  const durationMinutes = DURATION_PRESET_MINUTES[durationPreset] ?? customMinutes;
 
-  const { error } = await supabase.from("tasks").insert({
-    title: formData.get("title") as string,
-    client_id: clientId || null,
-    assigned_to: assignedTo || null,
-    task_date: formData.get("task_date") as string,
-    start_time: formData.get("start_time") as string,
-    duration_minutes: Number(formData.get("duration_minutes")),
-    status: (formData.get("status") as string) || "todo",
-  });
+  const { data: task, error } = await supabase
+    .from("tasks")
+    .insert({
+      title: formData.get("title") as string,
+      client_id: clientId || null,
+      task_date: formData.get("task_date") as string,
+      start_time: formData.get("start_time") as string,
+      duration_minutes: durationMinutes,
+      duration_preset: durationPreset,
+      status: (formData.get("status") as string) || "todo",
+    })
+    .select()
+    .single();
 
   if (error) throw new Error(error.message);
 
+  if (assigneeIds.length) {
+    const { error: e1 } = await supabase
+      .from("task_assignees")
+      .insert(assigneeIds.map((team_member_id) => ({ task_id: task.id, team_member_id })));
+    if (e1) throw new Error(e1.message);
+  }
+
   revalidatePath("/tasks");
   revalidatePath("/dashboard");
-  redirect("/tasks");
+}
+
+export async function createNoteAction(formData: FormData) {
+  const supabase = createClient();
+  const { error } = await supabase.from("notes").insert({
+    content: formData.get("content") as string,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath("/dashboard");
 }

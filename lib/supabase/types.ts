@@ -1,4 +1,5 @@
 export type TaskStatus = "todo" | "in_progress" | "revision" | "done";
+export type DurationPreset = "custom" | "half_day" | "full_day" | "two_days";
 export type ShootType = "video" | "photo";
 export type TeamRole = "video" | "edit" | "design" | "social" | "brand_management";
 export type ClientSector = "fnb" | "hotel" | "jewelry" | "other";
@@ -9,6 +10,15 @@ export interface Client {
   name: string;
   sector: ClientSector;
   is_active: boolean;
+  drive_url: string | null;
+  address: string | null;
+  place_id: string | null;
+  logo_url: string | null;
+  brand_colors: string[] | null;
+  brand_fonts: string | null;
+  brand_guide_url: string | null;
+  instagram_handle: string | null;
+  tiktok_handle: string | null;
   created_at: string;
 }
 
@@ -17,30 +27,44 @@ export interface TeamMember {
   name: string;
   role: TeamRole;
   email: string;
+  phone: string | null;
+  avatar_url: string | null;
   created_at: string;
 }
 
 export interface Task {
   id: string;
   client_id: string | null;
-  assigned_to: string | null;
   title: string;
   description: string | null;
   task_date: string;
   start_time: string;
   duration_minutes: number;
+  duration_preset: DurationPreset;
   status: TaskStatus;
   created_at: string;
 }
 
 export interface Shoot {
   id: string;
+  title: string | null;
   shoot_date: string;
   start_time: string;
   end_time: string;
   location: string | null;
+  place_id: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  is_outdoor: boolean;
   shoot_type: ShootType;
   notes: string | null;
+  created_at: string;
+}
+
+export interface Note {
+  id: string;
+  content: string;
+  created_by: string | null;
   created_at: string;
 }
 
