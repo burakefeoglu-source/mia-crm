@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { IconPlus, IconVideo, IconCamera, IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
-import { SlideOver } from "@/components/SlideOver";
+import { IconVideo, IconCamera, IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 import { ShootForm } from "@/components/forms/ShootForm";
 import { useRouter } from "next/navigation";
 
@@ -39,13 +38,9 @@ export function CalendarClient({
 }) {
   const [view, setView] = useState<ViewMode>("month");
   const [cursor, setCursor] = useState(new Date());
-  const [open, setOpen] = useState(false);
   const router = useRouter();
 
-  const close = () => {
-    setOpen(false);
-    router.refresh();
-  };
+  const onCreated = () => router.refresh();
 
   const shootsByDate = useMemo(() => {
     return shoots.reduce<Record<string, any[]>>((acc, s: any) => {
@@ -63,58 +58,50 @@ export function CalendarClient({
   };
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-5">
-        <div>
+    <div className="flex gap-6">
+      <div className="flex-1 min-w-0">
+        <div className="mb-5">
           <h1 className="font-display text-2xl font-medium mb-1">Çekim takvimi</h1>
           <p className="text-sm text-black/50">Video / foto çekim planlaması.</p>
         </div>
-        <button
-          onClick={() => setOpen(true)}
-          className="flex items-center gap-1.5 bg-mia text-white text-sm font-medium px-4 py-2.5 rounded-lg"
-        >
-          <IconPlus size={16} />
-          Yeni çekim
-        </button>
-      </div>
 
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <button onClick={() => navigate(-1)} className="text-black/40 hover:text-black/60">
-            <IconChevronLeft size={18} />
-          </button>
-          <span className="text-sm font-medium min-w-[140px]">
-            {view === "month" && `${MONTH_LABELS[cursor.getMonth()]} ${cursor.getFullYear()}`}
-            {view !== "month" && cursor.toLocaleDateString("tr-TR", { day: "numeric", month: "long" })}
-          </span>
-          <button onClick={() => navigate(1)} className="text-black/40 hover:text-black/60">
-            <IconChevronRight size={18} />
-          </button>
-        </div>
-        <div className="flex gap-1 bg-black/[0.04] rounded-lg p-1">
-          {(["month", "week", "day"] as ViewMode[]).map((v) => (
-            <button
-              key={v}
-              onClick={() => setView(v)}
-              className={`text-xs px-3 py-1.5 rounded-md ${
-                view === v ? "bg-white shadow-sm font-medium" : "text-black/50"
-              }`}
-            >
-              {v === "month" ? "Aylık" : v === "week" ? "Haftalık" : "Günlük"}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <button onClick={() => navigate(-1)} className="text-black/40 hover:text-black/60">
+              <IconChevronLeft size={18} />
             </button>
-          ))}
+            <span className="text-sm font-medium min-w-[140px]">
+              {view === "month" && `${MONTH_LABELS[cursor.getMonth()]} ${cursor.getFullYear()}`}
+              {view !== "month" && cursor.toLocaleDateString("tr-TR", { day: "numeric", month: "long" })}
+            </span>
+            <button onClick={() => navigate(1)} className="text-black/40 hover:text-black/60">
+              <IconChevronRight size={18} />
+            </button>
+          </div>
+          <div className="flex gap-1 bg-black/[0.04] rounded-lg p-1">
+            {(["month", "week", "day"] as ViewMode[]).map((v) => (
+              <button
+                key={v}
+                onClick={() => setView(v)}
+                className={`text-xs px-3 py-1.5 rounded-md ${
+                  view === v ? "bg-white shadow-sm font-medium" : "text-black/50"
+                }`}
+              >
+                {v === "month" ? "Aylık" : v === "week" ? "Haftalık" : "Günlük"}
+              </button>
+            ))}
+          </div>
         </div>
+
+        {view === "month" && <MonthView cursor={cursor} shootsByDate={shootsByDate} />}
+        {view === "week" && <WeekView cursor={cursor} shootsByDate={shootsByDate} />}
+        {view === "day" && <DayView cursor={cursor} shootsByDate={shootsByDate} />}
       </div>
 
-      {view === "month" && <MonthView cursor={cursor} shootsByDate={shootsByDate} />}
-      {view === "week" && <WeekView cursor={cursor} shootsByDate={shootsByDate} />}
-      {view === "day" && <DayView cursor={cursor} shootsByDate={shootsByDate} />}
-
-      {open && (
-        <SlideOver title="Yeni çekim" onClose={close}>
-          <ShootForm clients={clients} members={members} onDone={close} />
-        </SlideOver>
-      )}
+      <div className="w-[320px] shrink-0 bg-white border border-black/5 rounded-2xl p-5 h-fit shadow-sm">
+        <div className="text-sm font-medium text-black/80 mb-4">Yeni çekim</div>
+        <ShootForm clients={clients} members={members} onDone={onCreated} />
+      </div>
     </div>
   );
 }

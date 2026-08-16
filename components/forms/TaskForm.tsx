@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useRef, useTransition } from "react";
 import { createTaskAction } from "@/lib/actions/core";
 
 interface Option {
@@ -26,16 +26,19 @@ export function TaskForm({
 }) {
   const [pending, startTransition] = useTransition();
   const [preset, setPreset] = useState("custom");
+  const formRef = useRef<HTMLFormElement>(null);
 
   const handleSubmit = (formData: FormData) => {
     startTransition(async () => {
       await createTaskAction(formData);
+      formRef.current?.reset();
+      setPreset("custom");
       onDone();
     });
   };
 
   return (
-    <form action={handleSubmit} className="flex flex-col gap-4">
+    <form ref={formRef} action={handleSubmit} className="flex flex-col gap-4">
       <label className="text-sm text-black/60">
         Görev başlığı
         <input
