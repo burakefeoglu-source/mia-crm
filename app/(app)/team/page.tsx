@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { IconPlus } from "@tabler/icons-react";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -31,10 +32,13 @@ export default async function TeamPage() {
           <h1 className="font-display text-2xl font-medium mb-1">Ekip</h1>
           <p className="text-sm text-black/50">Kim ne üzerinde çalışıyor.</p>
         </div>
-        <button className="flex items-center gap-1.5 bg-mia text-white text-sm font-medium px-4 py-2.5 rounded-lg">
+        <Link
+          href="/team/new"
+          className="flex items-center gap-1.5 bg-mia text-white text-sm font-medium px-4 py-2.5 rounded-lg"
+        >
           <IconPlus size={16} />
           Ekip üyesi ekle
-        </button>
+        </Link>
       </div>
 
       <div className="grid grid-cols-3 gap-3">

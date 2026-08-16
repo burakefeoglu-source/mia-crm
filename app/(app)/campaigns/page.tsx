@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { IconPlus, IconFileTypePdf } from "@tabler/icons-react";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -25,10 +26,13 @@ export default async function CampaignsPage() {
             Hangi influencer'larla çalışacağını seç, müşteriye PDF olarak gönder.
           </p>
         </div>
-        <button className="flex items-center gap-1.5 bg-mia text-white text-sm font-medium px-4 py-2.5 rounded-lg">
+        <Link
+          href="/campaigns/new"
+          className="flex items-center gap-1.5 bg-mia text-white text-sm font-medium px-4 py-2.5 rounded-lg"
+        >
           <IconPlus size={16} />
           Yeni kampanya
-        </button>
+        </Link>
       </div>
 
       <div className="flex flex-col gap-3">

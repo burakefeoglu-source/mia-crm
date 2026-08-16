@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { IconPlus, IconBrandInstagram, IconBrandTiktok, IconBrandYoutube } from "@tabler/icons-react";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -19,10 +20,13 @@ export default async function InfluencersPage() {
             Tüm influencer'lar ve son çalışılan bütçeler. Kampanya oluşturmak için birini seç.
           </p>
         </div>
-        <button className="flex items-center gap-1.5 bg-mia text-white text-sm font-medium px-4 py-2.5 rounded-lg">
+        <Link
+          href="/influencers/new"
+          className="flex items-center gap-1.5 bg-mia text-white text-sm font-medium px-4 py-2.5 rounded-lg"
+        >
           <IconPlus size={16} />
           Influencer ekle
-        </button>
+        </Link>
       </div>
 
       <div className="bg-white border border-black/5 rounded-xl overflow-hidden">

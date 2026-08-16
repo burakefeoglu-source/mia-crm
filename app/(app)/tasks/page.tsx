@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { StatusBadge } from "@/components/StatusBadge";
 import { IconPlus } from "@tabler/icons-react";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -20,10 +21,13 @@ export default async function TasksPage() {
           <h1 className="font-display text-2xl font-medium mb-1">Görevler</h1>
           <p className="text-sm text-black/50">Tüm görevler, kişi ve müşteri bazlı.</p>
         </div>
-        <button className="flex items-center gap-1.5 bg-mia text-white text-sm font-medium px-4 py-2.5 rounded-lg">
+        <Link
+          href="/tasks/new"
+          className="flex items-center gap-1.5 bg-mia text-white text-sm font-medium px-4 py-2.5 rounded-lg"
+        >
           <IconPlus size={16} />
           Yeni görev
-        </button>
+        </Link>
       </div>
 
       <div className="bg-white border border-black/5 rounded-xl overflow-hidden">

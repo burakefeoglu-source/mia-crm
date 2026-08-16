@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { StatusBadge } from "@/components/StatusBadge";
 import { IconPlus } from "@tabler/icons-react";
+import Link from "next/link";
 import type { Task } from "@/lib/supabase/types";
 
 export const dynamic = "force-dynamic";
@@ -29,10 +30,13 @@ export default async function DashboardPage() {
         Görevleri ve çekimleri tek yerden takip et.
       </p>
 
-      <button className="flex items-center gap-1.5 bg-mia text-white text-sm font-medium px-4 py-2.5 rounded-lg mb-8">
+      <Link
+        href="/tasks/new"
+        className="flex items-center gap-1.5 bg-mia text-white text-sm font-medium px-4 py-2.5 rounded-lg mb-8"
+      >
         <IconPlus size={16} />
         Yeni görev ekle
-      </button>
+      </Link>
 
       <h2 className="text-sm font-medium mb-3">Bugünün görevleri</h2>
       <div className="bg-white border border-black/5 rounded-xl overflow-hidden mb-8">
