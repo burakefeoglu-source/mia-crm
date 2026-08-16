@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   IconLayoutDashboard,
   IconChecklist,
@@ -10,7 +10,9 @@ import {
   IconUsers,
   IconBrandGoogleDrive,
   IconStar,
+  IconLogout,
 } from "@tabler/icons-react";
+import { createClient } from "@/lib/supabase/client";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Panel", icon: IconLayoutDashboard },
@@ -24,6 +26,14 @@ const NAV_ITEMS = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  };
 
   return (
     <aside className="w-[200px] shrink-0 bg-white border-r border-black/5 flex flex-col gap-1 p-4">
@@ -49,6 +59,15 @@ export function Sidebar() {
           </Link>
         );
       })}
+
+      <div className="flex-1" />
+      <button
+        onClick={handleLogout}
+        className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-black/40 hover:bg-black/5"
+      >
+        <IconLogout size={17} stroke={1.75} />
+        Çıkış yap
+      </button>
     </aside>
   );
 }
