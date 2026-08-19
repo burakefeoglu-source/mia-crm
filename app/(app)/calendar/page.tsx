@@ -8,7 +8,9 @@ export default async function CalendarPage() {
 
   const { data: shoots } = await supabase
     .from("shoots")
-    .select("*, shoot_clients(clients(name)), shoot_team(team_members(name))")
+    .select(
+      "*, shoot_clients(client_id, clients(id, name)), shoot_team(team_member_id, team_members(id, name))"
+    )
     .order("shoot_date");
 
   const { data: clients } = await supabase.from("clients").select("id, name").order("name");

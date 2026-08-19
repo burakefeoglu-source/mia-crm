@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef, useTransition } from "react";
-import { createTaskAction } from "@/lib/actions/core";
+import { createTaskAction, updateTaskAction, deleteTaskAction } from "@/lib/actions/core";
+import { IconTrash } from "@tabler/icons-react";
 
 interface Option {
   id: string;
@@ -15,25 +16,55 @@ const DURATION_OPTIONS = [
   { value: "two_days", label: "2 gün" },
 ];
 
+interface TaskInitial {
+  id: string;
+  title: string;
+  description: string | null;
+  client_id: string | null;
+  task_date: string;
+  start_time: string;
+  duration_minutes: number;
+  duration_preset: string;
+  status: string;
+  assigneeIds: string[];
+}
+
 export function TaskForm({
   clients,
   members,
   onDone,
+  initial,
+  onDelete,
 }: {
   clients: Option[];
   members: Option[];
   onDone: () => void;
+  initial?: TaskInitial;
+  onDelete?: () => void;
 }) {
   const [pending, startTransition] = useTransition();
-  const [preset, setPreset] = useState("custom");
+  const [preset, setPreset] = useState(initial?.duration_preset ?? "custom");
   const formRef = useRef<HTMLFormElement>(null);
 
   const handleSubmit = (formData: FormData) => {
     startTransition(async () => {
-      await createTaskAction(formData);
-      formRef.current?.reset();
-      setPreset("custom");
+      if (initial) {
+        await updateTaskAction(initial.id, formData);
+      } else {
+        await createTaskAction(formData);
+        formRef.current?.reset();
+        setPreset("custom");
+      }
       onDone();
+    });
+  };
+
+  const handleDelete = () => {
+    if (!initial || !onDelete) return;
+    if (!confirm("Bu görevi silmek istediğine emin misin?")) return;
+    startTransition(async () => {
+      await deleteTaskAction(initial.id);
+      onDelete();
     });
   };
 
@@ -44,7 +75,19 @@ export function TaskForm({
         <input
           name="title"
           required
+          defaultValue={initial?.title}
           placeholder="Reels kurgu"
+          className="mt-1.5 w-full border border-black/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-mia"
+        />
+      </label>
+
+      <label className="text-sm text-black/60">
+        Açıklama
+        <textarea
+          name="description"
+          defaultValue={initial?.description ?? ""}
+          rows={2}
+          placeholder="Görev detayları…"
           className="mt-1.5 w-full border border-black/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-mia"
         />
       </label>
@@ -53,6 +96,7 @@ export function TaskForm({
         Müşteri
         <select
           name="client_id"
+          defaultValue={initial?.client_id ?? ""}
           className="mt-1.5 w-full border border-black/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-mia bg-white"
         >
           <option value="">Seçilmedi</option>
@@ -69,7 +113,12 @@ export function TaskForm({
         <div className="mt-1.5 border border-black/10 rounded-lg p-2 max-h-32 overflow-y-auto flex flex-col gap-1">
           {members.map((m) => (
             <label key={m.id} className="flex items-center gap-2 text-sm px-1.5 py-1">
-              <input type="checkbox" name="assignee_ids" value={m.id} />
+              <input
+                type="checkbox"
+                name="assignee_ids"
+                value={m.id}
+                defaultChecked={initial?.assigneeIds.includes(m.id)}
+              />
               {m.name}
             </label>
           ))}
@@ -84,6 +133,7 @@ export function TaskForm({
             type="date"
             name="task_date"
             required
+            defaultValue={initial?.task_date}
             className="mt-1.5 w-full border border-black/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-mia"
           />
         </label>
@@ -93,6 +143,7 @@ export function TaskForm({
             type="time"
             name="start_time"
             required
+            defaultValue={initial?.start_time}
             className="mt-1.5 w-full border border-black/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-mia"
           />
         </label>
@@ -121,7 +172,7 @@ export function TaskForm({
           <input
             type="number"
             name="duration_minutes"
-            defaultValue={60}
+            defaultValue={initial?.duration_minutes ?? 60}
             min={15}
             step={15}
             placeholder="Dakika"
@@ -134,7 +185,7 @@ export function TaskForm({
         Durum
         <select
           name="status"
-          defaultValue="todo"
+          defaultValue={initial?.status ?? "todo"}
           className="mt-1.5 w-full border border-black/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-mia bg-white"
         >
           <option value="todo">Bekliyor</option>
@@ -144,13 +195,25 @@ export function TaskForm({
         </select>
       </label>
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="bg-mia text-white text-sm font-medium rounded-lg py-2.5 mt-2 disabled:opacity-50"
-      >
-        {pending ? "Ekleniyor…" : "Görev ekle"}
-      </button>
+      <div className="flex gap-2 mt-2">
+        {initial && onDelete && (
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={pending}
+            className="w-11 flex items-center justify-center border border-black/10 text-red-500 rounded-lg disabled:opacity-50"
+          >
+            <IconTrash size={16} />
+          </button>
+        )}
+        <button
+          type="submit"
+          disabled={pending}
+          className="flex-1 bg-mia text-white text-sm font-medium rounded-lg py-2.5 disabled:opacity-50"
+        >
+          {pending ? "Kaydediliyor…" : initial ? "Kaydet" : "Görev ekle"}
+        </button>
+      </div>
     </form>
   );
 }

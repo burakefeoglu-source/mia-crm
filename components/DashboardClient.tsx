@@ -9,14 +9,24 @@ import { TaskForm } from "@/components/forms/TaskForm";
 import { createNoteAction } from "@/lib/actions/core";
 import { useRouter } from "next/navigation";
 
+interface Weather {
+  temp: number;
+  tempMax: number;
+  tempMin: number;
+  rainChance: number;
+  label: string;
+  emoji: string;
+}
+
 interface Props {
-  todayTasks: any[];
+  activeTasks: any[];
   upcomingShoots: any[];
   clients: { id: string; name: string }[];
   members: { id: string; name: string }[];
   activeNow: { id: string; name: string; task_title: string | null; client_name: string | null }[];
   notes: { id: string; content: string }[];
   markedDates: string[];
+  weather: Weather | null;
 }
 
 function initials(name: string) {
@@ -24,13 +34,14 @@ function initials(name: string) {
 }
 
 export function DashboardClient({
-  todayTasks,
+  activeTasks,
   upcomingShoots,
   clients,
   members,
   activeNow,
   notes,
   markedDates,
+  weather,
 }: Props) {
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [noteText, setNoteText] = useState("");
@@ -62,7 +73,7 @@ export function DashboardClient({
               Bugün, {new Date().toLocaleDateString("tr-TR", { day: "numeric", month: "long" })}
             </h1>
             <p className="text-sm text-black/50">
-              {todayTasks.length} görev, {upcomingShoots.length} çekim planlandı
+              {activeTasks.length} aktif görev, {upcomingShoots.length} çekim planlandı
             </p>
           </div>
           <button
@@ -74,10 +85,10 @@ export function DashboardClient({
           </button>
         </div>
 
-        <h2 className="text-sm font-medium mb-3">Bugünün görevleri</h2>
+        <h2 className="text-sm font-medium mb-3">Aktif görevler</h2>
         <div className="bg-white border border-black/5 rounded-xl overflow-hidden mb-8">
-          {todayTasks.length ? (
-            todayTasks.map((task: any) => (
+          {activeTasks.length ? (
+            activeTasks.map((task: any) => (
               <div
                 key={task.id}
                 className="flex items-center justify-between px-4 py-3 border-b border-black/5 last:border-0"
@@ -89,14 +100,14 @@ export function DashboardClient({
                   <div className="text-xs text-black/50">
                     {task.task_assignees?.map((a: any) => a.team_members?.name).filter(Boolean).join(", ") || "Atanmadı"}
                     {" · "}
-                    {task.start_time?.slice(0, 5)}
+                    {task.task_date} · {task.start_time?.slice(0, 5)}
                   </div>
                 </div>
                 <StatusBadge status={task.status} />
               </div>
             ))
           ) : (
-            <div className="px-4 py-6 text-sm text-black/40 text-center">Bugün için görev yok.</div>
+            <div className="px-4 py-6 text-sm text-black/40 text-center">Aktif görev yok.</div>
           )}
         </div>
 
@@ -126,6 +137,24 @@ export function DashboardClient({
       </div>
 
       <div className="w-[260px] shrink-0 bg-white border border-black/5 rounded-2xl p-5 flex flex-col gap-6 h-fit shadow-sm">
+        {weather && (
+          <>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs text-black/50 mb-0.5">İstanbul</div>
+                <div className="text-2xl font-display font-medium">{weather.temp}°</div>
+                <div className="text-[11px] text-black/45">{weather.label}</div>
+              </div>
+              <div className="text-3xl">{weather.emoji}</div>
+            </div>
+            <div className="flex items-center justify-between text-[11px] text-black/45 -mt-3">
+              <span>↑{weather.tempMax}° ↓{weather.tempMin}°</span>
+              {weather.rainChance > 30 && <span>💧 %{weather.rainChance}</span>}
+            </div>
+            <div className="h-px bg-black/[0.06]" />
+          </>
+        )}
+
         <MiniCalendar markedDates={markedDates} />
 
         <div className="h-px bg-black/[0.06]" />
@@ -164,9 +193,7 @@ export function DashboardClient({
                 {n.content}
               </div>
             ))}
-            {!notes.length && (
-              <div className="text-[11px] text-black/30">Henüz not yok.</div>
-            )}
+            {!notes.length && <div className="text-[11px] text-black/30">Henüz not yok.</div>}
           </div>
           <div className="flex gap-1.5">
             <input

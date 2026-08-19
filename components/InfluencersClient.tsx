@@ -7,6 +7,7 @@ import {
   IconBrandTiktok,
   IconBrandYoutube,
   IconFileTypePdf,
+  IconPencil,
 } from "@tabler/icons-react";
 import { Modal } from "@/components/Modal";
 import { InfluencerForm } from "@/components/forms/InfluencerForm";
@@ -29,8 +30,9 @@ export function InfluencersClient({
   clients: { id: string; name: string }[];
 }) {
   const [infModalOpen, setInfModalOpen] = useState(false);
+  const [editingInfluencer, setEditingInfluencer] = useState<any | null>(null);
   const [campaignFormOpen, setCampaignFormOpen] = useState(false);
-  const [activeCampaign, setActiveCampaign] = useState<any | null>(null);
+  const [editingCampaign, setEditingCampaign] = useState<any | null>(null);
   const router = useRouter();
 
   const refresh = () => router.refresh();
@@ -60,11 +62,12 @@ export function InfluencersClient({
                 <th className="px-4 py-3 font-medium">Nick</th>
                 <th className="px-4 py-3 font-medium">Sosyal medya</th>
                 <th className="px-4 py-3 font-medium">Son bütçe</th>
+                <th className="px-4 py-3 font-medium w-10"></th>
               </tr>
             </thead>
             <tbody>
               {influencers.map((inf) => (
-                <tr key={inf.id} className="border-b border-black/5 last:border-0">
+                <tr key={inf.id} className="border-b border-black/5 last:border-0 hover:bg-black/[0.015]">
                   <td className="px-4 py-3 font-medium">{inf.name}</td>
                   <td className="px-4 py-3 text-black/60">{inf.nickname ?? "—"}</td>
                   <td className="px-4 py-3">
@@ -89,11 +92,19 @@ export function InfluencersClient({
                   <td className="px-4 py-3 text-black/60">
                     {inf.last_budget ? `${Number(inf.last_budget).toLocaleString("tr-TR")} ₺` : "—"}
                   </td>
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => setEditingInfluencer(inf)}
+                      className="text-black/30 hover:text-mia"
+                    >
+                      <IconPencil size={15} />
+                    </button>
+                  </td>
                 </tr>
               ))}
               {!influencers.length && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-black/40">
+                  <td colSpan={5} className="px-4 py-8 text-center text-black/40">
                     Henüz influencer eklenmedi.
                   </td>
                 </tr>
@@ -114,7 +125,7 @@ export function InfluencersClient({
           {campaigns.map((c: any) => (
             <button
               key={c.id}
-              onClick={() => setActiveCampaign(c)}
+              onClick={() => setEditingCampaign(c)}
               className="text-left bg-black/[0.03] rounded-lg p-2.5 hover:bg-black/[0.06] transition-colors"
             >
               <div className="text-xs font-medium">{c.title}</div>
@@ -130,59 +141,54 @@ export function InfluencersClient({
       </div>
 
       {infModalOpen && (
-        <Modal
-          title="Influencer ekle"
-          onClose={() => {
-            setInfModalOpen(false);
-            refresh();
-          }}
-        >
+        <Modal title="Influencer ekle" onClose={() => { setInfModalOpen(false); refresh(); }}>
+          <InfluencerForm onDone={() => { setInfModalOpen(false); refresh(); }} />
+        </Modal>
+      )}
+
+      {editingInfluencer && (
+        <Modal title="Influencer'ı düzenle" onClose={() => { setEditingInfluencer(null); refresh(); }}>
           <InfluencerForm
-            onDone={() => {
-              setInfModalOpen(false);
-              refresh();
-            }}
+            onDone={() => { setEditingInfluencer(null); refresh(); }}
+            onDelete={() => { setEditingInfluencer(null); refresh(); }}
+            initial={editingInfluencer}
           />
         </Modal>
       )}
 
       {campaignFormOpen && (
-        <Modal
-          title="Yeni kampanya"
-          onClose={() => {
-            setCampaignFormOpen(false);
-            refresh();
-          }}
-        >
+        <Modal title="Yeni kampanya" onClose={() => { setCampaignFormOpen(false); refresh(); }}>
           <CampaignForm
             clients={clients}
             influencers={influencers}
-            onDone={() => {
-              setCampaignFormOpen(false);
-              refresh();
-            }}
+            onDone={() => { setCampaignFormOpen(false); refresh(); }}
           />
         </Modal>
       )}
 
-      {activeCampaign && (
-        <Modal title={activeCampaign.title} onClose={() => setActiveCampaign(null)}>
-          <div className="flex flex-col gap-3">
-            <div className="text-sm text-black/50">
-              {activeCampaign.clients?.name ?? "Müşteri yok"} · {STATUS_LABELS[activeCampaign.status]}
-              {activeCampaign.campaign_date && ` · ${activeCampaign.campaign_date}`}
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {activeCampaign.campaign_influencers?.map((ci: any) => (
-                <span key={ci.influencer_id} className="text-xs bg-mia-light text-mia px-2 py-1 rounded-md">
-                  {ci.influencers?.name}
-                  {ci.budget ? ` · ${Number(ci.budget).toLocaleString("tr-TR")} ₺` : ""}
-                </span>
-              ))}
-            </div>
+      {editingCampaign && (
+        <Modal title={editingCampaign.title} onClose={() => { setEditingCampaign(null); refresh(); }}>
+          <div className="flex flex-col gap-4">
+            <CampaignForm
+              clients={clients}
+              influencers={influencers}
+              onDone={() => { setEditingCampaign(null); refresh(); }}
+              onDelete={() => { setEditingCampaign(null); refresh(); }}
+              initial={{
+                id: editingCampaign.id,
+                title: editingCampaign.title,
+                client_id: editingCampaign.client_id,
+                campaign_date: editingCampaign.campaign_date,
+                status: editingCampaign.status,
+                selectedInfluencers: editingCampaign.campaign_influencers?.map((ci: any) => ({
+                  id: ci.influencer_id,
+                  budget: ci.budget,
+                })) ?? [],
+              }}
+            />
             <a
-              href={`/api/campaigns/${activeCampaign.id}/pdf`}
-              className="flex items-center justify-center gap-1.5 text-sm border border-black/10 rounded-lg px-4 py-2.5 text-black/70 hover:bg-black/5 mt-2"
+              href={`/api/campaigns/${editingCampaign.id}/pdf`}
+              className="flex items-center justify-center gap-1.5 text-sm border border-black/10 rounded-lg px-4 py-2.5 text-black/70 hover:bg-black/5"
             >
               <IconFileTypePdf size={16} />
               PDF indir — müşteriye gönder

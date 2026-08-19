@@ -1,24 +1,43 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { createCampaignAction } from "@/lib/actions/influencers";
+import { createCampaignAction, updateCampaignAction, deleteCampaignAction } from "@/lib/actions/influencers";
+import { IconTrash } from "@tabler/icons-react";
 
 interface Option {
   id: string;
   name: string;
 }
 
+interface CampaignInitial {
+  id: string;
+  title: string;
+  client_id: string | null;
+  campaign_date: string | null;
+  status: string;
+  selectedInfluencers: { id: string; budget: number | null }[];
+}
+
 export function CampaignForm({
   clients,
   influencers,
   onDone,
+  initial,
+  onDelete,
 }: {
   clients: Option[];
   influencers: Option[];
   onDone: () => void;
+  initial?: CampaignInitial;
+  onDelete?: () => void;
 }) {
   const [pending, startTransition] = useTransition();
-  const [selected, setSelected] = useState<string[]>([]);
+  const [selected, setSelected] = useState<string[]>(
+    initial?.selectedInfluencers.map((i) => i.id) ?? []
+  );
+
+  const getInitialBudget = (id: string) =>
+    initial?.selectedInfluencers.find((i) => i.id === id)?.budget ?? undefined;
 
   const toggle = (id: string) => {
     setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -26,8 +45,21 @@ export function CampaignForm({
 
   const handleSubmit = (formData: FormData) => {
     startTransition(async () => {
-      await createCampaignAction(formData);
+      if (initial) {
+        await updateCampaignAction(initial.id, formData);
+      } else {
+        await createCampaignAction(formData);
+      }
       onDone();
+    });
+  };
+
+  const handleDelete = () => {
+    if (!initial || !onDelete) return;
+    if (!confirm(`"${initial.title}" kampanyası silinsin mi?`)) return;
+    startTransition(async () => {
+      await deleteCampaignAction(initial.id);
+      onDelete();
     });
   };
 
@@ -38,6 +70,7 @@ export function CampaignForm({
         <input
           name="title"
           required
+          defaultValue={initial?.title}
           placeholder="Lagune Otel Yaz Kampanyası"
           className="mt-1.5 w-full border border-black/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-mia"
         />
@@ -47,6 +80,7 @@ export function CampaignForm({
         Müşteri
         <select
           name="client_id"
+          defaultValue={initial?.client_id ?? ""}
           className="mt-1.5 w-full border border-black/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-mia bg-white"
         >
           <option value="">Seçilmedi</option>
@@ -63,9 +97,25 @@ export function CampaignForm({
         <input
           type="date"
           name="campaign_date"
+          defaultValue={initial?.campaign_date ?? ""}
           className="mt-1.5 w-full border border-black/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-mia"
         />
       </label>
+
+      {initial && (
+        <label className="text-sm text-black/60">
+          Durum
+          <select
+            name="status"
+            defaultValue={initial.status}
+            className="mt-1.5 w-full border border-black/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-mia bg-white"
+          >
+            <option value="planning">Planlanıyor</option>
+            <option value="active">Aktif</option>
+            <option value="completed">Tamamlandı</option>
+          </select>
+        </label>
+      )}
 
       <div className="text-sm text-black/60">
         Influencer'lar (genel listeden)
@@ -88,6 +138,7 @@ export function CampaignForm({
                   name={`budget_${inf.id}`}
                   placeholder="Bütçe TL"
                   min={0}
+                  defaultValue={getInitialBudget(inf.id)}
                   className="w-24 border border-black/10 rounded-md px-2 py-1 text-xs outline-none focus:border-mia"
                 />
               )}
@@ -99,13 +150,25 @@ export function CampaignForm({
         </div>
       </div>
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="bg-mia text-white text-sm font-medium rounded-lg py-2.5 mt-2 disabled:opacity-50"
-      >
-        {pending ? "Oluşturuluyor…" : "Kampanya oluştur"}
-      </button>
+      <div className="flex gap-2 mt-2">
+        {initial && onDelete && (
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={pending}
+            className="w-11 flex items-center justify-center border border-black/10 text-red-500 rounded-lg disabled:opacity-50"
+          >
+            <IconTrash size={16} />
+          </button>
+        )}
+        <button
+          type="submit"
+          disabled={pending}
+          className="flex-1 bg-mia text-white text-sm font-medium rounded-lg py-2.5 disabled:opacity-50"
+        >
+          {pending ? "Kaydediliyor…" : initial ? "Kaydet" : "Kampanya oluştur"}
+        </button>
+      </div>
     </form>
   );
 }

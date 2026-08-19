@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { DashboardClient } from "@/components/DashboardClient";
+import { getIstanbulWeather } from "@/lib/weather";
 
 export const dynamic = "force-dynamic";
 
@@ -8,11 +9,13 @@ export default async function DashboardPage() {
   const today = new Date().toISOString().slice(0, 10);
   const nowTime = new Date().toTimeString().slice(0, 8);
 
-  const { data: todayTasks } = await supabase
+  const { data: activeTasks } = await supabase
     .from("tasks")
-    .select("*, clients(name), task_assignees(team_members(name))")
-    .eq("task_date", today)
-    .order("start_time");
+    .select("*, clients(name), task_assignees(team_members(id, name))")
+    .neq("status", "done")
+    .order("task_date")
+    .order("start_time")
+    .limit(8);
 
   const { data: upcomingShoots } = await supabase
     .from("shoots")
@@ -29,7 +32,8 @@ export default async function DashboardPage() {
     .order("created_at", { ascending: false })
     .limit(5);
 
-  // Ay için işaretli tarihler (görev veya çekim olan günler)
+  const weather = await getIstanbulWeather();
+
   const monthStart = today.slice(0, 8) + "01";
   const { data: monthTasks } = await supabase
     .from("tasks")
@@ -46,13 +50,16 @@ export default async function DashboardPage() {
     ])
   );
 
-  // Şu an ne yapıyor: bugün, saat aralığına giren görevi olan kişiler
+  const { data: todayTasksForActive } = await supabase
+    .from("tasks")
+    .select("*, clients(name), task_assignees(team_members(name))")
+    .eq("task_date", today);
+
   const activeNow = (members ?? []).map((m) => {
-    const activeTask = (todayTasks ?? []).find((t: any) => {
+    const activeTask = (todayTasksForActive ?? []).find((t: any) => {
       const assignees = t.task_assignees?.map((a: any) => a.team_members?.name) ?? [];
       if (!assignees.includes(m.name)) return false;
-      const start = t.start_time;
-      const [h, min] = start.split(":").map(Number);
+      const [h, min] = t.start_time.split(":").map(Number);
       const endMinutes = h * 60 + min + t.duration_minutes;
       const [nh, nmin] = nowTime.split(":").map(Number);
       const nowMinutes = nh * 60 + nmin;
@@ -69,13 +76,14 @@ export default async function DashboardPage() {
 
   return (
     <DashboardClient
-      todayTasks={todayTasks ?? []}
+      activeTasks={activeTasks ?? []}
       upcomingShoots={upcomingShoots ?? []}
       clients={clients ?? []}
       members={members ?? []}
       activeNow={activeNow}
       notes={notes ?? []}
       markedDates={markedDates}
+      weather={weather}
     />
   );
 }

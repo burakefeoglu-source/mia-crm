@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { StatusBadge } from "@/components/StatusBadge";
 import { TaskForm } from "@/components/forms/TaskForm";
+import { Modal } from "@/components/Modal";
 import { useRouter } from "next/navigation";
 
 interface Props {
@@ -26,9 +27,14 @@ function initials(name: string) {
 export function TasksClient({ tasks, clients, members }: Props) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [memberFilter, setMemberFilter] = useState("all");
+  const [editingTask, setEditingTask] = useState<any | null>(null);
   const router = useRouter();
 
   const onCreated = () => router.refresh();
+  const closeEdit = () => {
+    setEditingTask(null);
+    router.refresh();
+  };
 
   const filtered = useMemo(() => {
     return tasks.filter((t) => {
@@ -81,9 +87,10 @@ export function TasksClient({ tasks, clients, members }: Props) {
           {filtered.map((task: any) => {
             const assignees = task.task_assignees?.map((a: any) => a.team_members).filter(Boolean) ?? [];
             return (
-              <div
+              <button
                 key={task.id}
-                className="bg-white border border-black/5 rounded-xl px-4 py-3.5 flex items-center justify-between hover:border-black/10 transition-colors"
+                onClick={() => setEditingTask(task)}
+                className="text-left bg-white border border-black/5 rounded-xl px-4 py-3.5 flex items-center justify-between hover:border-black/10 transition-colors"
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="flex -space-x-1.5 shrink-0">
@@ -110,7 +117,7 @@ export function TasksClient({ tasks, clients, members }: Props) {
                   </div>
                 </div>
                 <StatusBadge status={task.status} />
-              </div>
+              </button>
             );
           })}
           {!filtered.length && (
@@ -123,6 +130,29 @@ export function TasksClient({ tasks, clients, members }: Props) {
         <div className="text-sm font-medium text-black/80 mb-4">Yeni görev</div>
         <TaskForm clients={clients} members={members} onDone={onCreated} />
       </div>
+
+      {editingTask && (
+        <Modal title="Görevi düzenle" onClose={closeEdit}>
+          <TaskForm
+            clients={clients}
+            members={members}
+            onDone={closeEdit}
+            onDelete={closeEdit}
+            initial={{
+              id: editingTask.id,
+              title: editingTask.title,
+              description: editingTask.description,
+              client_id: editingTask.client_id,
+              task_date: editingTask.task_date,
+              start_time: editingTask.start_time,
+              duration_minutes: editingTask.duration_minutes,
+              duration_preset: editingTask.duration_preset ?? "custom",
+              status: editingTask.status,
+              assigneeIds: editingTask.task_assignees?.map((a: any) => a.team_members?.id).filter(Boolean) ?? [],
+            }}
+          />
+        </Modal>
+      )}
     </div>
   );
 }

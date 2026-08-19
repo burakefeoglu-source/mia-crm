@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { IconVideo, IconCamera, IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 import { ShootForm } from "@/components/forms/ShootForm";
+import { Modal } from "@/components/Modal";
 import { useRouter } from "next/navigation";
 
 type ViewMode = "month" | "week" | "day";
@@ -17,14 +18,20 @@ function fmt(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
-function ShootChip({ shoot }: { shoot: any }) {
-  const Icon = shoot.shoot_type === "video" ? IconVideo : IconCamera;
-  return (
-    <div className="bg-white border border-black/5 rounded-md px-1.5 py-1 text-[10px] flex items-center gap-1 truncate">
-      <Icon size={11} className="text-mia shrink-0" />
-      <span className="truncate">{shoot.title || "Çekim"}</span>
-    </div>
-  );
+function shootToInitial(shoot: any) {
+  return {
+    id: shoot.id,
+    title: shoot.title,
+    shoot_date: shoot.shoot_date,
+    start_time: shoot.start_time,
+    end_time: shoot.end_time,
+    location: shoot.location,
+    shoot_type: shoot.shoot_type,
+    is_outdoor: shoot.is_outdoor ?? false,
+    notes: shoot.notes,
+    clientIds: shoot.shoot_clients?.map((sc: any) => sc.clients?.id ?? sc.client_id).filter(Boolean) ?? [],
+    teamIds: shoot.shoot_team?.map((st: any) => st.team_members?.id ?? st.team_member_id).filter(Boolean) ?? [],
+  };
 }
 
 export function CalendarClient({
@@ -38,9 +45,14 @@ export function CalendarClient({
 }) {
   const [view, setView] = useState<ViewMode>("month");
   const [cursor, setCursor] = useState(new Date());
+  const [editingShoot, setEditingShoot] = useState<any | null>(null);
   const router = useRouter();
 
   const onCreated = () => router.refresh();
+  const closeEdit = () => {
+    setEditingShoot(null);
+    router.refresh();
+  };
 
   const shootsByDate = useMemo(() => {
     return shoots.reduce<Record<string, any[]>>((acc, s: any) => {
@@ -93,20 +105,46 @@ export function CalendarClient({
           </div>
         </div>
 
-        {view === "month" && <MonthView cursor={cursor} shootsByDate={shootsByDate} />}
-        {view === "week" && <WeekView cursor={cursor} shootsByDate={shootsByDate} />}
-        {view === "day" && <DayView cursor={cursor} shootsByDate={shootsByDate} />}
+        {view === "month" && (
+          <MonthView cursor={cursor} shootsByDate={shootsByDate} onSelect={setEditingShoot} />
+        )}
+        {view === "week" && (
+          <WeekView cursor={cursor} shootsByDate={shootsByDate} onSelect={setEditingShoot} />
+        )}
+        {view === "day" && (
+          <DayView cursor={cursor} shootsByDate={shootsByDate} onSelect={setEditingShoot} />
+        )}
       </div>
 
       <div className="w-[320px] shrink-0 bg-white border border-black/5 rounded-2xl p-5 h-fit shadow-sm">
         <div className="text-sm font-medium text-black/80 mb-4">Yeni çekim</div>
         <ShootForm clients={clients} members={members} onDone={onCreated} />
       </div>
+
+      {editingShoot && (
+        <Modal title="Çekimi düzenle" onClose={closeEdit}>
+          <ShootForm
+            clients={clients}
+            members={members}
+            onDone={closeEdit}
+            onDelete={closeEdit}
+            initial={shootToInitial(editingShoot)}
+          />
+        </Modal>
+      )}
     </div>
   );
 }
 
-function MonthView({ cursor, shootsByDate }: { cursor: Date; shootsByDate: Record<string, any[]> }) {
+function MonthView({
+  cursor,
+  shootsByDate,
+  onSelect,
+}: {
+  cursor: Date;
+  shootsByDate: Record<string, any[]>;
+  onSelect: (s: any) => void;
+}) {
   const year = cursor.getFullYear();
   const month = cursor.getMonth();
   const firstDay = new Date(year, month, 1);
@@ -142,9 +180,19 @@ function MonthView({ cursor, shootsByDate }: { cursor: Date; shootsByDate: Recor
             >
               <div className={`text-[11px] mb-1 ${isToday ? "text-mia font-medium" : "text-black/40"}`}>{d}</div>
               <div className="flex flex-col gap-1">
-                {dayShoots.slice(0, 3).map((s) => (
-                  <ShootChip key={s.id} shoot={s} />
-                ))}
+                {dayShoots.slice(0, 3).map((s) => {
+                  const Icon = s.shoot_type === "video" ? IconVideo : IconCamera;
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => onSelect(s)}
+                      className="bg-white border border-black/5 rounded-md px-1.5 py-1 text-[10px] flex items-center gap-1 truncate hover:border-mia/40 text-left"
+                    >
+                      <Icon size={11} className="text-mia shrink-0" />
+                      <span className="truncate">{s.title || "Çekim"}</span>
+                    </button>
+                  );
+                })}
                 {dayShoots.length > 3 && (
                   <div className="text-[10px] text-black/40">+{dayShoots.length - 3} daha</div>
                 )}
@@ -157,7 +205,15 @@ function MonthView({ cursor, shootsByDate }: { cursor: Date; shootsByDate: Recor
   );
 }
 
-function WeekView({ cursor, shootsByDate }: { cursor: Date; shootsByDate: Record<string, any[]> }) {
+function WeekView({
+  cursor,
+  shootsByDate,
+  onSelect,
+}: {
+  cursor: Date;
+  shootsByDate: Record<string, any[]>;
+  onSelect: (s: any) => void;
+}) {
   const day = cursor.getDay() === 0 ? 7 : cursor.getDay();
   const monday = new Date(cursor);
   monday.setDate(cursor.getDate() - day + 1);
@@ -181,12 +237,16 @@ function WeekView({ cursor, shootsByDate }: { cursor: Date; shootsByDate: Record
               {dayShoots.map((shoot) => {
                 const Icon = shoot.shoot_type === "video" ? IconVideo : IconCamera;
                 return (
-                  <div key={shoot.id} className="bg-white border border-black/5 rounded-lg p-2.5 text-xs">
+                  <button
+                    key={shoot.id}
+                    onClick={() => onSelect(shoot)}
+                    className="text-left bg-white border border-black/5 rounded-lg p-2.5 text-xs hover:border-mia/40"
+                  >
                     <Icon size={14} className="text-mia mb-1" />
                     <div className="font-medium mb-0.5">{shoot.title || "Çekim"}</div>
                     <div className="text-black/50">{shoot.start_time?.slice(0, 5)}</div>
                     {shoot.location && <div className="text-black/50">{shoot.location}</div>}
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -197,7 +257,15 @@ function WeekView({ cursor, shootsByDate }: { cursor: Date; shootsByDate: Record
   );
 }
 
-function DayView({ cursor, shootsByDate }: { cursor: Date; shootsByDate: Record<string, any[]> }) {
+function DayView({
+  cursor,
+  shootsByDate,
+  onSelect,
+}: {
+  cursor: Date;
+  shootsByDate: Record<string, any[]>;
+  onSelect: (s: any) => void;
+}) {
   const dateStr = fmt(cursor);
   const dayShoots = (shootsByDate[dateStr] ?? []).sort((a, b) => a.start_time.localeCompare(b.start_time));
 
@@ -206,7 +274,11 @@ function DayView({ cursor, shootsByDate }: { cursor: Date; shootsByDate: Record<
       {dayShoots.map((shoot) => {
         const Icon = shoot.shoot_type === "video" ? IconVideo : IconCamera;
         return (
-          <div key={shoot.id} className="bg-white border border-black/5 rounded-xl p-4 flex items-center gap-3">
+          <button
+            key={shoot.id}
+            onClick={() => onSelect(shoot)}
+            className="text-left bg-white border border-black/5 rounded-xl p-4 flex items-center gap-3 hover:border-mia/40"
+          >
             <Icon size={18} className="text-mia shrink-0" />
             <div className="min-w-0 flex-1">
               <div className="text-sm font-medium">{shoot.title || "Çekim"}</div>
@@ -215,7 +287,7 @@ function DayView({ cursor, shootsByDate }: { cursor: Date; shootsByDate: Record<
                 {shoot.location && ` · ${shoot.location}`}
               </div>
             </div>
-          </div>
+          </button>
         );
       })}
       {!dayShoots.length && <div className="text-center text-sm text-black/40 py-10">Bu gün için çekim yok.</div>}

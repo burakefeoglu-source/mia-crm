@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { TeamMemberForm } from "@/components/forms/TeamMemberForm";
+import { Modal } from "@/components/Modal";
 import { useRouter } from "next/navigation";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -16,8 +18,14 @@ function initials(name: string) {
 }
 
 export function TeamClient({ members }: { members: any[] }) {
+  const [editingMember, setEditingMember] = useState<any | null>(null);
   const router = useRouter();
+
   const onCreated = () => router.refresh();
+  const closeEdit = () => {
+    setEditingMember(null);
+    router.refresh();
+  };
 
   return (
     <div className="flex gap-6">
@@ -29,7 +37,11 @@ export function TeamClient({ members }: { members: any[] }) {
 
         <div className="grid grid-cols-3 gap-3">
           {members.map((member) => (
-            <div key={member.id} className="bg-white border border-black/5 rounded-xl p-4 flex items-center gap-3">
+            <button
+              key={member.id}
+              onClick={() => setEditingMember(member)}
+              className="text-left bg-white border border-black/5 rounded-xl p-4 flex items-center gap-3 hover:border-black/10 transition-colors"
+            >
               {member.avatar_url ? (
                 <img src={member.avatar_url} alt={member.name} className="w-10 h-10 rounded-full object-cover" />
               ) : (
@@ -42,7 +54,7 @@ export function TeamClient({ members }: { members: any[] }) {
                 <div className="text-xs text-black/50">{ROLE_LABELS[member.role]}</div>
                 {member.phone && <div className="text-xs text-black/35">{member.phone}</div>}
               </div>
-            </div>
+            </button>
           ))}
           {!members.length && (
             <div className="col-span-3 text-center text-sm text-black/40 py-8">
@@ -56,6 +68,12 @@ export function TeamClient({ members }: { members: any[] }) {
         <div className="text-sm font-medium text-black/80 mb-4">Ekip üyesi ekle</div>
         <TeamMemberForm onDone={onCreated} />
       </div>
+
+      {editingMember && (
+        <Modal title="Ekip üyesini düzenle" onClose={closeEdit}>
+          <TeamMemberForm onDone={closeEdit} onDelete={closeEdit} initial={editingMember} />
+        </Modal>
+      )}
     </div>
   );
 }
