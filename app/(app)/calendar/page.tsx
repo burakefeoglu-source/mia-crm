@@ -15,6 +15,22 @@ export default async function CalendarPage() {
 
   const { data: clients } = await supabase.from("clients").select("id, name").order("name");
   const { data: members } = await supabase.from("team_members").select("id, name").order("name");
+  const { data: linkedFiles } = await supabase
+    .from("linked_files")
+    .select("id, entity_id, file_name, file_url")
+    .eq("entity_type", "shoot");
 
-  return <CalendarClient shoots={shoots ?? []} clients={clients ?? []} members={members ?? []} />;
+  const filesByShoot = (linkedFiles ?? []).reduce<Record<string, any[]>>((acc, f) => {
+    (acc[f.entity_id] ??= []).push(f);
+    return acc;
+  }, {});
+
+  return (
+    <CalendarClient
+      shoots={shoots ?? []}
+      clients={clients ?? []}
+      members={members ?? []}
+      filesByShoot={filesByShoot}
+    />
+  );
 }

@@ -1,12 +1,20 @@
 "use client";
 
-import { useRef, useTransition } from "react";
+import { useState, useRef, useTransition } from "react";
 import { createShootAction, updateShootAction, deleteShootAction } from "@/lib/actions/shoots";
-import { IconTrash } from "@tabler/icons-react";
+import { linkFileAction, unlinkFileAction } from "@/lib/actions/files";
+import { DrivePickerButton } from "@/components/DrivePickerButton";
+import { IconTrash, IconBrandGoogleDrive, IconX } from "@tabler/icons-react";
 
 interface Option {
   id: string;
   name: string;
+}
+
+interface LinkedFile {
+  id: string;
+  file_name: string;
+  file_url: string;
 }
 
 interface ShootInitial {
@@ -21,6 +29,7 @@ interface ShootInitial {
   notes: string | null;
   clientIds: string[];
   teamIds: string[];
+  linkedFiles?: LinkedFile[];
 }
 
 export function ShootForm({
@@ -37,6 +46,7 @@ export function ShootForm({
   onDelete?: () => void;
 }) {
   const [pending, startTransition] = useTransition();
+  const [files, setFiles] = useState<LinkedFile[]>(initial?.linkedFiles ?? []);
   const formRef = useRef<HTMLFormElement>(null);
 
   const handleSubmit = (formData: FormData) => {
@@ -57,6 +67,21 @@ export function ShootForm({
     startTransition(async () => {
       await deleteShootAction(initial.id);
       onDelete();
+    });
+  };
+
+  const handleFilePicked = (file: { id: string; name: string; url: string; mimeType?: string }) => {
+    if (!initial) return;
+    startTransition(async () => {
+      await linkFileAction("shoot", initial.id, file);
+      setFiles((prev) => [...prev, { id: file.id, file_name: file.name, file_url: file.url }]);
+    });
+  };
+
+  const handleFileRemove = (linkedFileId: string) => {
+    startTransition(async () => {
+      await unlinkFileAction(linkedFileId);
+      setFiles((prev) => prev.filter((f) => f.id !== linkedFileId));
     });
   };
 
@@ -180,6 +205,41 @@ export function ShootForm({
           className="mt-1.5 w-full border border-black/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-mia"
         />
       </label>
+
+      {initial && (
+        <div className="text-sm text-black/60">
+          <div className="flex items-center justify-between mb-1.5">
+            <span>Bağlı dosyalar</span>
+            <DrivePickerButton onPicked={handleFilePicked} />
+          </div>
+          <div className="flex flex-col gap-1">
+            {files.map((f) => (
+              <div
+                key={f.id}
+                className="flex items-center gap-2 bg-black/[0.03] rounded-lg px-2.5 py-2 text-xs"
+              >
+                <IconBrandGoogleDrive size={14} className="text-mia shrink-0" />
+                <a
+                  href={f.file_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1 truncate hover:underline"
+                >
+                  {f.file_name}
+                </a>
+                <button
+                  type="button"
+                  onClick={() => handleFileRemove(f.id)}
+                  className="text-black/30 hover:text-red-500 shrink-0"
+                >
+                  <IconX size={13} />
+                </button>
+              </div>
+            ))}
+            {!files.length && <div className="text-xs text-black/30">Henüz dosya bağlanmadı.</div>}
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-2 mt-2">
         {initial && onDelete && (

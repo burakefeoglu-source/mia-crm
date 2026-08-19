@@ -14,6 +14,22 @@ export default async function TasksPage() {
 
   const { data: clients } = await supabase.from("clients").select("id, name").order("name");
   const { data: members } = await supabase.from("team_members").select("id, name").order("name");
+  const { data: linkedFiles } = await supabase
+    .from("linked_files")
+    .select("id, entity_id, file_name, file_url")
+    .eq("entity_type", "task");
 
-  return <TasksClient tasks={tasks ?? []} clients={clients ?? []} members={members ?? []} />;
+  const filesByTask = (linkedFiles ?? []).reduce<Record<string, any[]>>((acc, f) => {
+    (acc[f.entity_id] ??= []).push(f);
+    return acc;
+  }, {});
+
+  return (
+    <TasksClient
+      tasks={tasks ?? []}
+      clients={clients ?? []}
+      members={members ?? []}
+      filesByTask={filesByTask}
+    />
+  );
 }

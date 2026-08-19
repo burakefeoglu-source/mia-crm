@@ -10,6 +10,7 @@ interface Props {
   tasks: any[];
   clients: { id: string; name: string }[];
   members: { id: string; name: string }[];
+  filesByTask: Record<string, any[]>;
 }
 
 const STATUS_FILTERS = [
@@ -24,7 +25,7 @@ function initials(name: string) {
   return name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase();
 }
 
-export function TasksClient({ tasks, clients, members }: Props) {
+export function TasksClient({ tasks, clients, members, filesByTask }: Props) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [memberFilter, setMemberFilter] = useState("all");
   const [editingTask, setEditingTask] = useState<any | null>(null);
@@ -149,6 +150,7 @@ export function TasksClient({ tasks, clients, members }: Props) {
               duration_preset: editingTask.duration_preset ?? "custom",
               status: editingTask.status,
               assigneeIds: editingTask.task_assignees?.map((a: any) => a.team_members?.id).filter(Boolean) ?? [],
+              linkedFiles: filesByTask[editingTask.id] ?? [],
             }}
           />
         </Modal>

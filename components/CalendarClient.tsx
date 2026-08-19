@@ -18,7 +18,7 @@ function fmt(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
-function shootToInitial(shoot: any) {
+function shootToInitial(shoot: any, filesByShoot: Record<string, any[]>) {
   return {
     id: shoot.id,
     title: shoot.title,
@@ -31,6 +31,7 @@ function shootToInitial(shoot: any) {
     notes: shoot.notes,
     clientIds: shoot.shoot_clients?.map((sc: any) => sc.clients?.id ?? sc.client_id).filter(Boolean) ?? [],
     teamIds: shoot.shoot_team?.map((st: any) => st.team_members?.id ?? st.team_member_id).filter(Boolean) ?? [],
+    linkedFiles: filesByShoot[shoot.id] ?? [],
   };
 }
 
@@ -38,10 +39,12 @@ export function CalendarClient({
   shoots,
   clients,
   members,
+  filesByShoot,
 }: {
   shoots: any[];
   clients: { id: string; name: string }[];
   members: { id: string; name: string }[];
+  filesByShoot: Record<string, any[]>;
 }) {
   const [view, setView] = useState<ViewMode>("month");
   const [cursor, setCursor] = useState(new Date());
@@ -128,7 +131,7 @@ export function CalendarClient({
             members={members}
             onDone={closeEdit}
             onDelete={closeEdit}
-            initial={shootToInitial(editingShoot)}
+            initial={shootToInitial(editingShoot, filesByShoot)}
           />
         </Modal>
       )}

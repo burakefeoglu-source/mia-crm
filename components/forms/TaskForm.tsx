@@ -2,7 +2,9 @@
 
 import { useState, useRef, useTransition } from "react";
 import { createTaskAction, updateTaskAction, deleteTaskAction } from "@/lib/actions/core";
-import { IconTrash } from "@tabler/icons-react";
+import { linkFileAction, unlinkFileAction } from "@/lib/actions/files";
+import { DrivePickerButton } from "@/components/DrivePickerButton";
+import { IconTrash, IconBrandGoogleDrive, IconX } from "@tabler/icons-react";
 
 interface Option {
   id: string;
@@ -16,6 +18,12 @@ const DURATION_OPTIONS = [
   { value: "two_days", label: "2 gün" },
 ];
 
+interface LinkedFile {
+  id: string;
+  file_name: string;
+  file_url: string;
+}
+
 interface TaskInitial {
   id: string;
   title: string;
@@ -27,6 +35,7 @@ interface TaskInitial {
   duration_preset: string;
   status: string;
   assigneeIds: string[];
+  linkedFiles?: LinkedFile[];
 }
 
 export function TaskForm({
@@ -44,6 +53,7 @@ export function TaskForm({
 }) {
   const [pending, startTransition] = useTransition();
   const [preset, setPreset] = useState(initial?.duration_preset ?? "custom");
+  const [files, setFiles] = useState<LinkedFile[]>(initial?.linkedFiles ?? []);
   const formRef = useRef<HTMLFormElement>(null);
 
   const handleSubmit = (formData: FormData) => {
@@ -65,6 +75,21 @@ export function TaskForm({
     startTransition(async () => {
       await deleteTaskAction(initial.id);
       onDelete();
+    });
+  };
+
+  const handleFilePicked = (file: { id: string; name: string; url: string; mimeType?: string }) => {
+    if (!initial) return;
+    startTransition(async () => {
+      await linkFileAction("task", initial.id, file);
+      setFiles((prev) => [...prev, { id: file.id, file_name: file.name, file_url: file.url }]);
+    });
+  };
+
+  const handleFileRemove = (linkedFileId: string) => {
+    startTransition(async () => {
+      await unlinkFileAction(linkedFileId);
+      setFiles((prev) => prev.filter((f) => f.id !== linkedFileId));
     });
   };
 
@@ -194,6 +219,41 @@ export function TaskForm({
           <option value="done">Tamamlandı</option>
         </select>
       </label>
+
+      {initial && (
+        <div className="text-sm text-black/60">
+          <div className="flex items-center justify-between mb-1.5">
+            <span>Bağlı dosyalar</span>
+            <DrivePickerButton onPicked={handleFilePicked} />
+          </div>
+          <div className="flex flex-col gap-1">
+            {files.map((f) => (
+              <div
+                key={f.id}
+                className="flex items-center gap-2 bg-black/[0.03] rounded-lg px-2.5 py-2 text-xs"
+              >
+                <IconBrandGoogleDrive size={14} className="text-mia shrink-0" />
+                <a
+                  href={f.file_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1 truncate hover:underline"
+                >
+                  {f.file_name}
+                </a>
+                <button
+                  type="button"
+                  onClick={() => handleFileRemove(f.id)}
+                  className="text-black/30 hover:text-red-500 shrink-0"
+                >
+                  <IconX size={13} />
+                </button>
+              </div>
+            ))}
+            {!files.length && <div className="text-xs text-black/30">Henüz dosya bağlanmadı.</div>}
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-2 mt-2">
         {initial && onDelete && (
