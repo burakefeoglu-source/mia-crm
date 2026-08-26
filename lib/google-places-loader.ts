@@ -1,11 +1,11 @@
-// Google Maps JS API'yi (Places kütüphanesiyle) tembel yükler.
+// Google Maps JS API'yi (yeni importLibrary yöntemiyle) tembel yükler.
 let loadPromise: Promise<void> | null = null;
 
 export function loadGooglePlaces(): Promise<void> {
   if (loadPromise) return loadPromise;
 
   loadPromise = new Promise((resolve, reject) => {
-    if ((window as any).google?.maps?.places) {
+    if ((window as any).google?.maps?.importLibrary) {
       resolve();
       return;
     }
@@ -15,7 +15,7 @@ export function loadGooglePlaces(): Promise<void> {
       return;
     }
     const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places&loading=async`;
     script.async = true;
     script.defer = true;
     script.dataset.googlePlaces = "true";
