@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { extractTaskFromMessage } from "@/lib/task-extraction";
+import { notifyTaskAssignees } from "@/lib/notifications";
 
 const DURATION_PRESET_MINUTES: Record<string, number> = {
   half_day: 240,
@@ -114,6 +115,13 @@ export async function POST(req: NextRequest) {
     if (matchedAssignees.length) {
       await supabase.from("task_assignees").insert(
         matchedAssignees.map((m) => ({ task_id: task.id, team_member_id: m.id }))
+      );
+      // Görevi oluşturan kişi (mesajı atan) hariç, diğer atanan kişilere de bildirim gönder.
+      const otherAssignees = matchedAssignees.filter((m) => m.phone?.replace(/[^0-9]/g, "") !== fromNumber);
+      await notifyTaskAssignees(
+        supabase,
+        task,
+        otherAssignees.map((m) => m.id)
       );
     }
 

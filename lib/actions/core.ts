@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { notifyTaskAssignees } from "@/lib/notifications";
 
 export async function createClientAction(formData: FormData) {
   const supabase = createClient();
@@ -143,6 +144,8 @@ export async function createTaskAction(formData: FormData) {
       .from("task_assignees")
       .insert(assigneeIds.map((team_member_id) => ({ task_id: task.id, team_member_id })));
     if (e1) throw new Error(e1.message);
+
+    await notifyTaskAssignees(supabase, task, assigneeIds);
   }
 
   revalidatePath("/tasks");
