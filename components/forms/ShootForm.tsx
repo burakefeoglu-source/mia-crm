@@ -4,6 +4,7 @@ import { useState, useRef, useTransition } from "react";
 import { createShootAction, updateShootAction, deleteShootAction } from "@/lib/actions/shoots";
 import { linkFileAction, unlinkFileAction } from "@/lib/actions/files";
 import { DrivePickerButton } from "@/components/DrivePickerButton";
+import { PlaceAutocompleteInput } from "@/components/PlaceAutocompleteInput";
 import { IconTrash, IconBrandGoogleDrive, IconX } from "@tabler/icons-react";
 
 interface Option {
@@ -118,11 +119,10 @@ export function ShootForm({
 
       <label className="text-sm text-black/60">
         Konum
-        <input
+        <PlaceAutocompleteInput
           name="location"
           defaultValue={initial?.location ?? ""}
           placeholder="Adres yaz (örn. Beşiktaş, İstanbul)"
-          className="mt-1.5 w-full border border-black/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-mia"
         />
       </label>
 

@@ -2,6 +2,7 @@
 
 import { useRef, useTransition } from "react";
 import { createClientAction, updateClientAction } from "@/lib/actions/core";
+import { PlaceAutocompleteInput } from "@/components/PlaceAutocompleteInput";
 
 interface ClientInitial {
   id: string;
@@ -67,11 +68,10 @@ export function ClientForm({
 
       <label className="text-sm text-black/60">
         Konum / adres
-        <input
+        <PlaceAutocompleteInput
           name="address"
           defaultValue={initial?.address ?? ""}
           placeholder="Nişantaşı, İstanbul"
-          className="mt-1.5 w-full border border-black/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-mia"
         />
       </label>
 
