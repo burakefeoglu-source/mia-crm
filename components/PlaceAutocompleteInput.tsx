@@ -70,7 +70,10 @@ export function PlaceAutocompleteInput({ name, defaultValue, placeholder, onPlac
 
   return (
     <div className="mt-1.5">
-      <div ref={containerRef} className="[&_gmp-place-autocomplete]:w-full" />
+      <div
+        ref={containerRef}
+        className="border border-black/10 rounded-lg overflow-hidden [&_gmp-place-autocomplete]:w-full [&_gmp-place-autocomplete]:block"
+      />
       {address && (
         <div className="text-xs text-black/40 mt-1.5 px-0.5">
           Seçili konum: <span className="text-black/60">{address}</span>

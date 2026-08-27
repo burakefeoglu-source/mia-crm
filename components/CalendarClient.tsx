@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { IconVideo, IconCamera, IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 import { ShootForm } from "@/components/forms/ShootForm";
 import { Modal } from "@/components/Modal";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 type ViewMode = "month" | "week" | "day";
 
@@ -50,6 +51,20 @@ export function CalendarClient({
   const [cursor, setCursor] = useState(new Date());
   const [editingShoot, setEditingShoot] = useState<any | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel("calendar-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "shoots" }, () => {
+        router.refresh();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [router]);
 
   const onCreated = () => router.refresh();
   const closeEdit = () => {

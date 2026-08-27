@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { StatusBadge } from "@/components/StatusBadge";
 import { TaskForm } from "@/components/forms/TaskForm";
 import { Modal } from "@/components/Modal";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 interface Props {
   tasks: any[];
@@ -30,6 +31,20 @@ export function TasksClient({ tasks, clients, members, filesByTask }: Props) {
   const [memberFilter, setMemberFilter] = useState("all");
   const [editingTask, setEditingTask] = useState<any | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel("tasks-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, () => {
+        router.refresh();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [router]);
 
   const onCreated = () => router.refresh();
   const closeEdit = () => {

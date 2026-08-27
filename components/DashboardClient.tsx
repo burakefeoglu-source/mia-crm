@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { IconPlus } from "@tabler/icons-react";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Modal } from "@/components/Modal";
@@ -8,6 +8,7 @@ import { MiniCalendar } from "@/components/MiniCalendar";
 import { TaskForm } from "@/components/forms/TaskForm";
 import { createNoteAction } from "@/lib/actions/core";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 interface Weather {
   temp: number;
@@ -47,6 +48,20 @@ export function DashboardClient({
   const [noteText, setNoteText] = useState("");
   const [pending, startTransition] = useTransition();
   const router = useRouter();
+
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel("dashboard-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, () => {
+        router.refresh();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [router]);
 
   const closeTaskModal = () => {
     setTaskModalOpen(false);
