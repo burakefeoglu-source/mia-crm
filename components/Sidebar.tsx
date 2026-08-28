@@ -10,6 +10,7 @@ import {
   IconUsers,
   IconBrandGoogleDrive,
   IconStar,
+  IconSparkles,
   IconLogout,
 } from "@tabler/icons-react";
 import { createClient } from "@/lib/supabase/client";
@@ -21,6 +22,7 @@ const NAV_ITEMS = [
   { href: "/clients", label: "Müşteriler", icon: IconBuildingStore },
   { href: "/team", label: "Ekip", icon: IconUsers },
   { href: "/influencers", label: "Influencer", icon: IconStar },
+  { href: "/assistant", label: "AI Asistan", icon: IconSparkles },
   { href: "/drive", label: "Drive", icon: IconBrandGoogleDrive },
 ];
 
