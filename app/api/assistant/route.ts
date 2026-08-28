@@ -23,9 +23,13 @@ export async function POST(req: NextRequest) {
       .from("shoots")
       .select("*, shoot_team(team_member_id), shoot_clients(clients(name))")
       .gte("shoot_date", today),
-    supabase.from("team_members").select("id, name, role"),
+    supabase.from("team_members").select("id, name, role, email"),
     supabase.from("clients").select("id, name").eq("is_active", true),
   ]);
+
+  const currentMember = (members ?? []).find(
+    (m) => m.email?.toLowerCase() === user.email?.toLowerCase()
+  ) ?? null;
 
   const overdue = getOverdueTasks(tasks ?? []);
   const understaffed = getUnderStaffedShoots(shoots ?? []);
@@ -68,11 +72,15 @@ export async function POST(req: NextRequest) {
 
   const systemPrompt = `Sen Mia Digital Solutions ajansı için çalışan bir AI Proje Yöneticisisin. Görevin, ajansın görev ve çekim verilerini analiz edip ekibin sorularını yanıtlamak, riskleri belirtmek ve pratik öneriler sunmak.
 
+Şu an seninle konuşan kişi: ${currentMember ? `${currentMember.name} (${currentMember.role})` : "kimliği belirlenemeyen bir kullanıcı"}.
+"Benim görevlerim", "bugün ne yapmalıyım" gibi birinci şahıs sorularında bu kişiye ait görevleri filtrele ve ona hitap et (sen dilinde, ismiyle). Genel ekip durumu sorulursa herkesi kapsayan cevap ver.
+
 Kurallar:
 - Türkçe, net ve kısa cevap ver. Gereksiz uzatma.
 - Sadece aşağıda verilen veriye dayan, uydurma bilgi verme.
 - Riskli/geciken durumları fark ettiğinde nazikçe ama net şekilde belirt.
 - Somut öneri ver ("X kişisine yük az, Y'ye devredilebilir" gibi).
+- Bir ekip üyesiyle konuşuyorsan (yönetici değil), üslubun destekleyici olsun — suçlayıcı ya da yargılayıcı değil.
 
 Güncel veri (JSON):
 ${JSON.stringify(snapshot)}`;

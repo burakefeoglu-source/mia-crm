@@ -1,27 +1,39 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { IconSend2, IconAlertTriangle, IconClockExclamation, IconScale, IconSparkles } from "@tabler/icons-react";
+import { IconSend2, IconAlertTriangle, IconClockExclamation, IconScale, IconSparkles, IconChecklist } from "@tabler/icons-react";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
 }
 
+interface CurrentMember {
+  id: string;
+  name: string;
+}
+
 export function AssistantClient({
+  currentMember,
+  myTasksToday,
   overdueTasks,
   understaffedShoots,
   workload,
 }: {
+  currentMember: CurrentMember | null;
+  myTasksToday: any[];
   overdueTasks: any[];
   understaffedShoots: any[];
   workload: { list: { id: string; name: string; count: number }[]; imbalanced: { name: string }[] };
 }) {
+  const firstName = currentMember?.name?.split(" ")[0] ?? null;
+
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content:
-        "Merhaba! Ben Mia CRM'in AI proje yöneticisiyim. Görevler, çekimler ve ekip iş yükü hakkında soru sorabilirsin — örneğin \"Bu hafta kim en yoğun?\" ya da \"Hangi görevler gecikti?\"",
+      content: firstName
+        ? `Merhaba ${firstName}! Bugün ${myTasksToday.length} görevin var. Sana yardımcı olabileceğim bir şey var mı — kendi görevlerin, ekip durumu, ya da başka bir konuda?`
+        : "Merhaba! Görevler, çekimler ve ekip iş yükü hakkında soru sorabilirsin.",
     },
   ]);
   const [input, setInput] = useState("");
@@ -63,11 +75,38 @@ export function AssistantClient({
 
   return (
     <div className="flex gap-6 h-[calc(100vh-64px)]">
-      <div className="w-[300px] shrink-0 flex flex-col gap-4">
+      <div className="w-[300px] shrink-0 flex flex-col gap-4 overflow-y-auto">
         <div>
-          <h1 className="font-display text-xl font-medium mb-1">AI Asistan</h1>
-          <p className="text-sm text-black/50">Proje sağlığı ve risk özeti.</p>
+          <h1 className="font-display text-xl font-medium mb-1">
+            {firstName ? `Merhaba, ${firstName}` : "AI Asistan"}
+          </h1>
+          <p className="text-sm text-black/50">Sana ve ekibe özel durum özeti.</p>
         </div>
+
+        {currentMember && (
+          <div className="bg-mia text-white rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <IconChecklist size={16} />
+              <span className="text-sm font-medium">Bugünkü görevlerin</span>
+              <span className="ml-auto text-xs bg-white/20 px-2 py-0.5 rounded-full font-medium">
+                {myTasksToday.length}
+              </span>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              {myTasksToday.slice(0, 4).map((t: any) => (
+                <button
+                  key={t.id}
+                  onClick={() => send(`"${t.title}" görevi hakkında bilgi ver`)}
+                  className="text-left text-xs bg-white/10 hover:bg-white/20 rounded-lg px-2.5 py-2 transition-colors"
+                >
+                  <div className="font-medium truncate">{t.title}</div>
+                  <div className="text-white/70">{t.start_time?.slice(0, 5)}</div>
+                </button>
+              ))}
+              {!myTasksToday.length && <div className="text-xs text-white/70">Bugün için görevin yok 🎉</div>}
+            </div>
+          </div>
+        )}
 
         <div className="bg-white border border-black/5 rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-3">
@@ -121,24 +160,40 @@ export function AssistantClient({
             <span className="text-sm font-medium">Ekip iş yükü</span>
           </div>
           <div className="flex flex-col gap-2">
-            {workload.list.map((m) => (
-              <div key={m.id}>
-                <div className="flex items-center justify-between text-xs mb-1">
-                  <span className={workload.imbalanced.some((i) => i.name === m.name) ? "font-medium text-red-500" : "text-black/60"}>
-                    {m.name}
-                  </span>
-                  <span className="text-black/40">{m.count}</span>
+            {workload.list.map((m) => {
+              const isMe = m.id === currentMember?.id;
+              return (
+                <div key={m.id}>
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span
+                      className={
+                        workload.imbalanced.some((i) => i.name === m.name)
+                          ? "font-medium text-red-500"
+                          : isMe
+                          ? "font-medium text-mia"
+                          : "text-black/60"
+                      }
+                    >
+                      {m.name}
+                      {isMe && " (sen)"}
+                    </span>
+                    <span className="text-black/40">{m.count}</span>
+                  </div>
+                  <div className="h-1.5 bg-black/[0.05] rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${
+                        workload.imbalanced.some((i) => i.name === m.name)
+                          ? "bg-red-400"
+                          : isMe
+                          ? "bg-mia"
+                          : "bg-black/20"
+                      }`}
+                      style={{ width: `${(m.count / maxWorkload) * 100}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="h-1.5 bg-black/[0.05] rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full ${
-                      workload.imbalanced.some((i) => i.name === m.name) ? "bg-red-400" : "bg-mia"
-                    }`}
-                    style={{ width: `${(m.count / maxWorkload) * 100}%` }}
-                  />
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
@@ -175,7 +230,7 @@ export function AssistantClient({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && send()}
-            placeholder="Bir şey sor…"
+            placeholder={firstName ? "Bir şey sor…" : "Bir şey sor…"}
             className="flex-1 border border-black/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-mia"
           />
           <button
