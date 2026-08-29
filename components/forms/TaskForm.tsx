@@ -60,6 +60,7 @@ export function TaskForm({
   const [files, setFiles] = useState<LinkedFile[]>(initial?.linkedFiles ?? []);
   const [taskDate, setTaskDate] = useState(initial?.task_date ?? "");
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>(initial?.assigneeIds ?? []);
+  const [repeatFrequency, setRepeatFrequency] = useState("none");
   const formRef = useRef<HTMLFormElement>(null);
 
   const leaveConflicts = taskDate
@@ -80,6 +81,7 @@ export function TaskForm({
         setPreset("custom");
         setTaskDate("");
         setSelectedAssignees([]);
+        setRepeatFrequency("none");
       }
       onDone();
     });
@@ -248,19 +250,34 @@ export function TaskForm({
       </label>
 
       {!initial && (
-        <label className="text-sm text-black/60">
-          Tekrarla
-          <select
-            name="repeat_months"
-            defaultValue="0"
-            className="mt-1.5 w-full border border-black/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-mia bg-white"
-          >
-            <option value="0">Tekrarlanmasın</option>
-            <option value="2">3 ay boyunca her ay (aynı gün)</option>
-            <option value="5">6 ay boyunca her ay (aynı gün)</option>
-            <option value="11">12 ay boyunca her ay (aynı gün)</option>
-          </select>
-        </label>
+        <div className="flex gap-3">
+          <label className="text-sm text-black/60 flex-1">
+            Tekrarla
+            <select
+              name="repeat_frequency"
+              value={repeatFrequency}
+              onChange={(e) => setRepeatFrequency(e.target.value)}
+              className="mt-1.5 w-full border border-black/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-mia bg-white"
+            >
+              <option value="none">Tekrarlanmasın</option>
+              <option value="weekly">Haftada 1</option>
+              <option value="monthly">Ayda 1</option>
+            </select>
+          </label>
+          {repeatFrequency !== "none" && (
+            <label className="text-sm text-black/60 flex-1">
+              Kaç kez
+              <input
+                type="number"
+                name="repeat_count"
+                defaultValue={repeatFrequency === "weekly" ? 4 : 3}
+                min={1}
+                max={52}
+                className="mt-1.5 w-full border border-black/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-mia"
+              />
+            </label>
+          )}
+        </div>
       )}
 
       {initial && (

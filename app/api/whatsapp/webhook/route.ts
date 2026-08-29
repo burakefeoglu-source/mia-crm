@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { extractTaskFromMessage } from "@/lib/task-extraction";
 import { notifyTaskAssignees, createInAppNotifications } from "@/lib/notifications";
+import { getAverageDurationForMember, estimateCompletionTime } from "@/lib/task-estimation";
 
 const DURATION_PRESET_MINUTES: Record<string, number> = {
   half_day: 240,
@@ -85,10 +86,17 @@ export async function POST(req: NextRequest) {
       extracted.assignee_names.some((name) => name.toLowerCase() === m.name.toLowerCase())
     );
 
-    const durationMinutes =
-      extracted.duration_preset !== "custom"
-        ? DURATION_PRESET_MINUTES[extracted.duration_preset]
-        : extracted.duration_minutes ?? 60;
+    let durationMinutes: number;
+    if (extracted.duration_preset !== "custom") {
+      durationMinutes = DURATION_PRESET_MINUTES[extracted.duration_preset];
+    } else if (extracted.duration_minutes) {
+      durationMinutes = extracted.duration_minutes;
+    } else if (matchedAssignees[0]) {
+      // Süre belirtilmemiş — o kişinin geçmiş görevlerine bakıp ortalama süreyi tahmin et.
+      durationMinutes = await getAverageDurationForMember(supabase, matchedAssignees[0].id);
+    } else {
+      durationMinutes = 60;
+    }
 
     const { data: task, error } = await supabase
       .from("tasks")
@@ -130,11 +138,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    let estimateLine: string | null = null;
+    if (matchedAssignees[0]) {
+      const estimate = await estimateCompletionTime(supabase, matchedAssignees[0].id, durationMinutes);
+      estimateLine = `Tahmini bitiş: ${estimate.estimatedDate} · ${estimate.estimatedTime}${
+        estimate.tasksAhead > 0 ? ` (${estimate.tasksAhead} iş sırada)` : ""
+      }`;
+    }
+
     const confirmationParts = [
       `✅ Görev oluşturuldu: "${extracted.title}"`,
       matchedClient ? `Müşteri: ${matchedClient.name}` : null,
       matchedAssignees.length ? `Atanan: ${matchedAssignees.map((m) => m.name).join(", ")}` : "Atanan kişi belirtilmedi",
-      `Tarih: ${extracted.task_date} · ${extracted.start_time ?? "09:00"}`,
+      `Tarih: ${extracted.task_date} · ${extracted.start_time ?? "09:00"} · ${durationMinutes} dk`,
+      estimateLine,
     ].filter(Boolean);
 
     const confirmation = confirmationParts.join("\n");

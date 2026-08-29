@@ -123,8 +123,11 @@ export async function createTaskAction(formData: FormData) {
   const durationPreset = (formData.get("duration_preset") as string) || "custom";
   const customMinutes = Number(formData.get("duration_minutes")) || 60;
   const durationMinutes = DURATION_PRESET_MINUTES[durationPreset] ?? customMinutes;
-  const repeatMonths = Math.max(0, Math.min(11, Number(formData.get("repeat_months")) || 0));
-  const repeatGroupId = repeatMonths > 0 ? crypto.randomUUID() : null;
+
+  const repeatFrequency = (formData.get("repeat_frequency") as string) || "none"; // none | weekly | monthly
+  const repeatCount = Math.max(0, Math.min(52, Number(formData.get("repeat_count")) || 0));
+  const isRepeating = repeatFrequency !== "none" && repeatCount > 0;
+  const repeatGroupId = isRepeating ? crypto.randomUUID() : null;
 
   const baseDate = formData.get("task_date") as string;
   const title = formData.get("title") as string;
@@ -133,10 +136,13 @@ export async function createTaskAction(formData: FormData) {
   const status = (formData.get("status") as string) || "todo";
 
   const occurrenceDates = [baseDate];
-  for (let i = 1; i <= repeatMonths; i++) {
-    const d = new Date(baseDate + "T00:00:00");
-    d.setMonth(d.getMonth() + i);
-    occurrenceDates.push(d.toISOString().slice(0, 10));
+  if (isRepeating) {
+    for (let i = 1; i <= repeatCount; i++) {
+      const d = new Date(baseDate + "T00:00:00");
+      if (repeatFrequency === "weekly") d.setDate(d.getDate() + i * 7);
+      else d.setMonth(d.getMonth() + i);
+      occurrenceDates.push(d.toISOString().slice(0, 10));
+    }
   }
 
   const { data: insertedTasks, error } = await supabase
@@ -165,11 +171,11 @@ export async function createTaskAction(formData: FormData) {
     );
     if (e1) throw new Error(e1.message);
 
-    // Bildirimler sadece ilk (yakın) görev için gönderilir, gelecek aylar için spam yapılmaz.
+    // Bildirimler sadece ilk (yakın) görev için gönderilir, gelecek tekrarlar için spam yapılmaz.
     await notifyTaskAssignees(supabase, task, assigneeIds);
     await createInAppNotifications(supabase, assigneeIds, {
       type: "task_assigned",
-      title: repeatMonths > 0 ? "Yeni tekrarlayan görev atandı" : "Yeni görev atandı",
+      title: isRepeating ? "Yeni tekrarlayan görev atandı" : "Yeni görev atandı",
       body: task.title,
       link: "/tasks",
     });

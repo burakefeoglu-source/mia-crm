@@ -37,7 +37,7 @@ Kullanıcının mesajından bir görev çıkar. SADECE aşağıdaki JSON format�
   "task_date": "YYYY-MM-DD formatında, 'yarın'/'bugün'/gün isimleri gibi göreceli ifadeleri bugünün tarihine göre çöz",
   "start_time": "HH:MM formatında 24 saat, belirtilmemişse 09:00 varsay",
   "duration_preset": "custom, half_day, full_day, two_days içinden birini seç (yarım gün/1 gün/2 gün geçiyorsa onu kullan, yoksa custom)",
-  "duration_minutes": "duration_preset custom ise dakika olarak süre, belirtilmemişse 60",
+  "duration_minutes": "duration_preset custom ise VE kullanıcı süreyi açıkça belirtmişse dakika olarak süre; kullanıcı süre belirtmemişse null bırak (varsayım yapma, biz geçmiş verilere göre tahmin edeceğiz)",
   "needs_clarification": "başlık veya tarih çıkarılamıyorsa true, aksi halde false",
   "clarification_message": "needs_clarification true ise Türkçe, kısa bir netleştirme sorusu; değilse null"
 }`;
