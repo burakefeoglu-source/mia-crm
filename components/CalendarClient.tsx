@@ -44,7 +44,7 @@ export function CalendarClient({
 }: {
   shoots: any[];
   clients: { id: string; name: string }[];
-  members: { id: string; name: string }[];
+  members: any[];
   filesByShoot: Record<string, any[]>;
 }) {
   const [view, setView] = useState<ViewMode>("month");

@@ -123,34 +123,53 @@ export async function createTaskAction(formData: FormData) {
   const durationPreset = (formData.get("duration_preset") as string) || "custom";
   const customMinutes = Number(formData.get("duration_minutes")) || 60;
   const durationMinutes = DURATION_PRESET_MINUTES[durationPreset] ?? customMinutes;
+  const repeatMonths = Math.max(0, Math.min(11, Number(formData.get("repeat_months")) || 0));
+  const repeatGroupId = repeatMonths > 0 ? crypto.randomUUID() : null;
 
-  const { data: task, error } = await supabase
+  const baseDate = formData.get("task_date") as string;
+  const title = formData.get("title") as string;
+  const description = (formData.get("description") as string) || null;
+  const startTime = formData.get("start_time") as string;
+  const status = (formData.get("status") as string) || "todo";
+
+  const occurrenceDates = [baseDate];
+  for (let i = 1; i <= repeatMonths; i++) {
+    const d = new Date(baseDate + "T00:00:00");
+    d.setMonth(d.getMonth() + i);
+    occurrenceDates.push(d.toISOString().slice(0, 10));
+  }
+
+  const { data: insertedTasks, error } = await supabase
     .from("tasks")
-    .insert({
-      title: formData.get("title") as string,
-      description: (formData.get("description") as string) || null,
-      client_id: clientId || null,
-      task_date: formData.get("task_date") as string,
-      start_time: formData.get("start_time") as string,
-      duration_minutes: durationMinutes,
-      duration_preset: durationPreset,
-      status: (formData.get("status") as string) || "todo",
-    })
-    .select()
-    .single();
+    .insert(
+      occurrenceDates.map((task_date) => ({
+        title,
+        description,
+        client_id: clientId || null,
+        task_date,
+        start_time: startTime,
+        duration_minutes: durationMinutes,
+        duration_preset: durationPreset,
+        status,
+        repeat_group_id: repeatGroupId,
+      }))
+    )
+    .select();
 
   if (error) throw new Error(error.message);
+  const task = insertedTasks![0];
 
   if (assigneeIds.length) {
-    const { error: e1 } = await supabase
-      .from("task_assignees")
-      .insert(assigneeIds.map((team_member_id) => ({ task_id: task.id, team_member_id })));
+    const { error: e1 } = await supabase.from("task_assignees").insert(
+      insertedTasks!.flatMap((t) => assigneeIds.map((team_member_id) => ({ task_id: t.id, team_member_id })))
+    );
     if (e1) throw new Error(e1.message);
 
+    // Bildirimler sadece ilk (yakın) görev için gönderilir, gelecek aylar için spam yapılmaz.
     await notifyTaskAssignees(supabase, task, assigneeIds);
     await createInAppNotifications(supabase, assigneeIds, {
       type: "task_assigned",
-      title: "Yeni görev atandı",
+      title: repeatMonths > 0 ? "Yeni tekrarlayan görev atandı" : "Yeni görev atandı",
       body: task.title,
       link: "/tasks",
     });
@@ -214,4 +233,39 @@ export async function createNoteAction(formData: FormData) {
   });
   if (error) throw new Error(error.message);
   revalidatePath("/dashboard");
+}
+
+export async function addTeamLeaveAction(memberId: string, formData: FormData) {
+  const supabase = createClient();
+  const { error } = await supabase.from("team_leaves").insert({
+    team_member_id: memberId,
+    start_date: formData.get("start_date") as string,
+    end_date: formData.get("end_date") as string,
+    note: (formData.get("note") as string) || null,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath("/team");
+}
+
+export async function removeTeamLeaveAction(leaveId: string) {
+  const supabase = createClient();
+  const { error } = await supabase.from("team_leaves").delete().eq("id", leaveId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/team");
+}
+
+export async function updateNotificationPrefAction(enabled: boolean) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.email) throw new Error("Giriş yapılmamış");
+
+  const { error } = await supabase
+    .from("team_members")
+    .update({ whatsapp_notifications_enabled: enabled })
+    .ilike("email", user.email);
+
+  if (error) throw new Error(error.message);
+  revalidatePath("/", "layout");
 }

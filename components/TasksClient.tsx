@@ -6,11 +6,12 @@ import { TaskForm } from "@/components/forms/TaskForm";
 import { Modal } from "@/components/Modal";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { IconSearch, IconFileExport } from "@tabler/icons-react";
 
 interface Props {
   tasks: any[];
   clients: { id: string; name: string }[];
-  members: { id: string; name: string }[];
+  members: any[];
   filesByTask: Record<string, any[]>;
 }
 
@@ -29,6 +30,7 @@ function initials(name: string) {
 export function TasksClient({ tasks, clients, members, filesByTask }: Props) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [memberFilter, setMemberFilter] = useState("all");
+  const [search, setSearch] = useState("");
   const [editingTask, setEditingTask] = useState<any | null>(null);
   const router = useRouter();
 
@@ -53,22 +55,69 @@ export function TasksClient({ tasks, clients, members, filesByTask }: Props) {
   };
 
   const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
     return tasks.filter((t) => {
       if (statusFilter !== "all" && t.status !== statusFilter) return false;
       if (memberFilter !== "all") {
         const ids = t.task_assignees?.map((a: any) => a.team_members?.id) ?? [];
         if (!ids.includes(memberFilter)) return false;
       }
+      if (q) {
+        const assigneeNames = t.task_assignees?.map((a: any) => a.team_members?.name).join(" ") ?? "";
+        const haystack = `${t.title} ${t.clients?.name ?? ""} ${assigneeNames}`.toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
       return true;
     });
-  }, [tasks, statusFilter, memberFilter]);
+  }, [tasks, statusFilter, memberFilter, search]);
+
+  const exportCsv = () => {
+    const header = ["Başlık", "Müşteri", "Atanan", "Tarih", "Saat", "Durum"];
+    const rows = filtered.map((t: any) => [
+      t.title,
+      t.clients?.name ?? "",
+      t.task_assignees?.map((a: any) => a.team_members?.name).filter(Boolean).join(", ") ?? "",
+      t.task_date,
+      t.start_time?.slice(0, 5) ?? "",
+      t.status,
+    ]);
+    const csv = [header, ...rows]
+      .map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `gorevler_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="flex gap-6">
       <div className="flex-1 min-w-0">
-        <div className="mb-5">
-          <h1 className="font-display text-2xl font-medium mb-1">Görevler</h1>
-          <p className="text-sm text-black/50">Tüm görevler, kişi ve müşteri bazlı.</p>
+        <div className="mb-5 flex items-center justify-between gap-3">
+          <div>
+            <h1 className="font-display text-2xl font-medium mb-1">Görevler</h1>
+            <p className="text-sm text-black/50">Tüm görevler, kişi ve müşteri bazlı.</p>
+          </div>
+          <button
+            onClick={exportCsv}
+            className="flex items-center gap-1.5 text-xs border border-black/10 rounded-lg px-3 py-2 text-black/60 hover:bg-black/5 shrink-0"
+          >
+            <IconFileExport size={14} />
+            Excel'e aktar
+          </button>
+        </div>
+
+        <div className="relative mb-4">
+          <IconSearch size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-black/30" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Görev, müşteri ya da kişi ara…"
+            className="w-full border border-black/10 rounded-lg pl-9 pr-3 py-2.5 text-sm outline-none focus:border-mia"
+          />
         </div>
 
         <div className="flex flex-wrap gap-2 mb-5">

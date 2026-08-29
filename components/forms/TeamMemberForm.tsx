@@ -1,8 +1,21 @@
 "use client";
 
-import { useRef, useTransition } from "react";
-import { createTeamMemberAction, updateTeamMemberAction, deleteTeamMemberAction } from "@/lib/actions/core";
-import { IconTrash } from "@tabler/icons-react";
+import { useRef, useState, useTransition } from "react";
+import {
+  createTeamMemberAction,
+  updateTeamMemberAction,
+  deleteTeamMemberAction,
+  addTeamLeaveAction,
+  removeTeamLeaveAction,
+} from "@/lib/actions/core";
+import { IconTrash, IconX } from "@tabler/icons-react";
+
+interface Leave {
+  id: string;
+  start_date: string;
+  end_date: string;
+  note: string | null;
+}
 
 interface TeamMemberInitial {
   id: string;
@@ -11,6 +24,7 @@ interface TeamMemberInitial {
   email: string;
   phone: string | null;
   avatar_url: string | null;
+  leaves?: Leave[];
 }
 
 export function TeamMemberForm({
@@ -23,6 +37,9 @@ export function TeamMemberForm({
   onDelete?: () => void;
 }) {
   const [pending, startTransition] = useTransition();
+  const [leaves, setLeaves] = useState<Leave[]>(initial?.leaves ?? []);
+  const [leaveStart, setLeaveStart] = useState("");
+  const [leaveEnd, setLeaveEnd] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
 
   const handleSubmit = (formData: FormData) => {
@@ -43,6 +60,26 @@ export function TeamMemberForm({
     startTransition(async () => {
       await deleteTeamMemberAction(initial.id);
       onDelete();
+    });
+  };
+
+  const addLeave = () => {
+    if (!initial || !leaveStart || !leaveEnd) return;
+    const fd = new FormData();
+    fd.set("start_date", leaveStart);
+    fd.set("end_date", leaveEnd);
+    startTransition(async () => {
+      await addTeamLeaveAction(initial.id, fd);
+      setLeaves((prev) => [...prev, { id: crypto.randomUUID(), start_date: leaveStart, end_date: leaveEnd, note: null }]);
+      setLeaveStart("");
+      setLeaveEnd("");
+    });
+  };
+
+  const removeLeave = (id: string) => {
+    startTransition(async () => {
+      await removeTeamLeaveAction(id);
+      setLeaves((prev) => prev.filter((l) => l.id !== id));
     });
   };
 
@@ -105,6 +142,49 @@ export function TeamMemberForm({
           className="mt-1.5 w-full border border-black/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-mia"
         />
       </label>
+
+      {initial && (
+        <div className="text-sm text-black/60">
+          <div className="mb-1.5">İzinli olduğu tarihler</div>
+          <div className="flex flex-col gap-1 mb-2">
+            {leaves.map((l) => (
+              <div key={l.id} className="flex items-center gap-2 bg-black/[0.03] rounded-lg px-2.5 py-2 text-xs">
+                <span className="flex-1">{l.start_date} → {l.end_date}</span>
+                <button
+                  type="button"
+                  onClick={() => removeLeave(l.id)}
+                  className="text-black/30 hover:text-red-500"
+                >
+                  <IconX size={13} />
+                </button>
+              </div>
+            ))}
+            {!leaves.length && <div className="text-xs text-black/30">Kayıtlı izin yok.</div>}
+          </div>
+          <div className="flex gap-1.5">
+            <input
+              type="date"
+              value={leaveStart}
+              onChange={(e) => setLeaveStart(e.target.value)}
+              className="flex-1 border border-black/10 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-mia"
+            />
+            <input
+              type="date"
+              value={leaveEnd}
+              onChange={(e) => setLeaveEnd(e.target.value)}
+              className="flex-1 border border-black/10 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-mia"
+            />
+            <button
+              type="button"
+              onClick={addLeave}
+              disabled={!leaveStart || !leaveEnd || pending}
+              className="text-xs bg-black/5 text-black/60 px-3 rounded-lg disabled:opacity-50"
+            >
+              Ekle
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-2 mt-2">
         {initial && onDelete && (

@@ -11,6 +11,10 @@ interface Option {
   name: string;
 }
 
+interface MemberOption extends Option {
+  leaves?: { start_date: string; end_date: string }[];
+}
+
 const DURATION_OPTIONS = [
   { value: "custom", label: "Özel" },
   { value: "half_day", label: "Yarım gün" },
@@ -46,7 +50,7 @@ export function TaskForm({
   onDelete,
 }: {
   clients: Option[];
-  members: Option[];
+  members: MemberOption[];
   onDone: () => void;
   initial?: TaskInitial;
   onDelete?: () => void;
@@ -54,7 +58,17 @@ export function TaskForm({
   const [pending, startTransition] = useTransition();
   const [preset, setPreset] = useState(initial?.duration_preset ?? "custom");
   const [files, setFiles] = useState<LinkedFile[]>(initial?.linkedFiles ?? []);
+  const [taskDate, setTaskDate] = useState(initial?.task_date ?? "");
+  const [selectedAssignees, setSelectedAssignees] = useState<string[]>(initial?.assigneeIds ?? []);
   const formRef = useRef<HTMLFormElement>(null);
+
+  const leaveConflicts = taskDate
+    ? members.filter(
+        (m) =>
+          selectedAssignees.includes(m.id) &&
+          m.leaves?.some((l) => l.start_date <= taskDate && l.end_date >= taskDate)
+      )
+    : [];
 
   const handleSubmit = (formData: FormData) => {
     startTransition(async () => {
@@ -64,6 +78,8 @@ export function TaskForm({
         await createTaskAction(formData);
         formRef.current?.reset();
         setPreset("custom");
+        setTaskDate("");
+        setSelectedAssignees([]);
       }
       onDone();
     });
@@ -142,13 +158,23 @@ export function TaskForm({
                 type="checkbox"
                 name="assignee_ids"
                 value={m.id}
-                defaultChecked={initial?.assigneeIds.includes(m.id)}
+                checked={selectedAssignees.includes(m.id)}
+                onChange={(e) =>
+                  setSelectedAssignees((prev) =>
+                    e.target.checked ? [...prev, m.id] : prev.filter((id) => id !== m.id)
+                  )
+                }
               />
               {m.name}
             </label>
           ))}
           {!members.length && <div className="text-xs text-black/30 px-1.5">Ekip yok</div>}
         </div>
+        {leaveConflicts.length > 0 && (
+          <div className="mt-1.5 text-xs text-amber-600 bg-amber-50 rounded-lg px-2.5 py-2">
+            ⚠️ {leaveConflicts.map((m) => m.name).join(", ")} bu tarihte izinli görünüyor.
+          </div>
+        )}
       </div>
 
       <div className="flex gap-3">
@@ -158,7 +184,8 @@ export function TaskForm({
             type="date"
             name="task_date"
             required
-            defaultValue={initial?.task_date}
+            value={taskDate}
+            onChange={(e) => setTaskDate(e.target.value)}
             className="mt-1.5 w-full border border-black/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-mia"
           />
         </label>
@@ -219,6 +246,22 @@ export function TaskForm({
           <option value="done">Tamamlandı</option>
         </select>
       </label>
+
+      {!initial && (
+        <label className="text-sm text-black/60">
+          Tekrarla
+          <select
+            name="repeat_months"
+            defaultValue="0"
+            className="mt-1.5 w-full border border-black/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-mia bg-white"
+          >
+            <option value="0">Tekrarlanmasın</option>
+            <option value="2">3 ay boyunca her ay (aynı gün)</option>
+            <option value="5">6 ay boyunca her ay (aynı gün)</option>
+            <option value="11">12 ay boyunca her ay (aynı gün)</option>
+          </select>
+        </label>
+      )}
 
       {initial && (
         <div className="text-sm text-black/60">

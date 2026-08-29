@@ -12,6 +12,10 @@ interface Option {
   name: string;
 }
 
+interface MemberOption extends Option {
+  leaves?: { start_date: string; end_date: string }[];
+}
+
 interface LinkedFile {
   id: string;
   file_name: string;
@@ -41,14 +45,24 @@ export function ShootForm({
   onDelete,
 }: {
   clients: Option[];
-  members: Option[];
+  members: MemberOption[];
   onDone: () => void;
   initial?: ShootInitial;
   onDelete?: () => void;
 }) {
   const [pending, startTransition] = useTransition();
   const [files, setFiles] = useState<LinkedFile[]>(initial?.linkedFiles ?? []);
+  const [shootDate, setShootDate] = useState(initial?.shoot_date ?? "");
+  const [selectedTeam, setSelectedTeam] = useState<string[]>(initial?.teamIds ?? []);
   const formRef = useRef<HTMLFormElement>(null);
+
+  const leaveConflicts = shootDate
+    ? members.filter(
+        (m) =>
+          selectedTeam.includes(m.id) &&
+          m.leaves?.some((l) => l.start_date <= shootDate && l.end_date >= shootDate)
+      )
+    : [];
 
   const handleSubmit = (formData: FormData) => {
     startTransition(async () => {
@@ -57,6 +71,8 @@ export function ShootForm({
       } else {
         await createShootAction(formData);
         formRef.current?.reset();
+        setShootDate("");
+        setSelectedTeam([]);
       }
       onDone();
     });
@@ -133,7 +149,8 @@ export function ShootForm({
             type="date"
             name="shoot_date"
             required
-            defaultValue={initial?.shoot_date}
+            value={shootDate}
+            onChange={(e) => setShootDate(e.target.value)}
             className="mt-1.5 w-full border border-black/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-mia"
           />
         </label>
@@ -182,13 +199,23 @@ export function ShootForm({
                 type="checkbox"
                 name="team_ids"
                 value={m.id}
-                defaultChecked={initial?.teamIds.includes(m.id)}
+                checked={selectedTeam.includes(m.id)}
+                onChange={(e) =>
+                  setSelectedTeam((prev) =>
+                    e.target.checked ? [...prev, m.id] : prev.filter((id) => id !== m.id)
+                  )
+                }
               />
               {m.name}
             </label>
           ))}
           {!members.length && <div className="text-xs text-black/30 px-1.5">Ekip yok</div>}
         </div>
+        {leaveConflicts.length > 0 && (
+          <div className="mt-1.5 text-xs text-amber-600 bg-amber-50 rounded-lg px-2.5 py-2">
+            ⚠️ {leaveConflicts.map((m) => m.name).join(", ")} bu tarihte izinli görünüyor.
+          </div>
+        )}
       </div>
 
       <label className="flex items-center gap-2 text-sm text-black/60">

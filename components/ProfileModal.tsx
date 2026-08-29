@@ -4,9 +4,10 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/components/Modal";
 import { updateOwnProfileAction } from "@/lib/actions/profile";
+import { updateNotificationPrefAction } from "@/lib/actions/core";
 import { AVATAR_PRESETS } from "@/lib/avatar-presets";
 import { createClient } from "@/lib/supabase/client";
-import { IconChecklist, IconLogout } from "@tabler/icons-react";
+import { IconChecklist, IconLogout, IconBrandWhatsapp } from "@tabler/icons-react";
 import Link from "next/link";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -24,10 +25,12 @@ interface Member {
   role: string;
   phone: string | null;
   avatar_url: string | null;
+  whatsapp_notifications_enabled?: boolean;
 }
 
 export function ProfileModal({ member, onClose }: { member: Member; onClose: () => void }) {
   const [avatar, setAvatar] = useState(member.avatar_url ?? "");
+  const [notifEnabled, setNotifEnabled] = useState(member.whatsapp_notifications_enabled ?? true);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -36,6 +39,15 @@ export function ProfileModal({ member, onClose }: { member: Member; onClose: () 
       await updateOwnProfileAction(formData);
       router.refresh();
       onClose();
+    });
+  };
+
+  const toggleNotifications = () => {
+    const next = !notifEnabled;
+    setNotifEnabled(next);
+    startTransition(async () => {
+      await updateNotificationPrefAction(next);
+      router.refresh();
     });
   };
 
@@ -93,6 +105,26 @@ export function ProfileModal({ member, onClose }: { member: Member; onClose: () 
             className="mt-1.5 w-full border border-black/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-mia"
           />
         </label>
+
+        <div className="flex items-center justify-between border border-black/10 rounded-lg px-3 py-2.5">
+          <div className="flex items-center gap-2 text-sm text-black/70">
+            <IconBrandWhatsapp size={16} className="text-green-600" />
+            WhatsApp bildirimleri
+          </div>
+          <button
+            type="button"
+            onClick={toggleNotifications}
+            className={`w-10 h-6 rounded-full relative transition-colors ${
+              notifEnabled ? "bg-mia" : "bg-black/15"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                notifEnabled ? "translate-x-4" : "translate-x-0.5"
+              }`}
+            />
+          </button>
+        </div>
 
         <Link
           href="/assistant"

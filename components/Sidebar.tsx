@@ -34,6 +34,7 @@ interface CurrentMember {
   role: string;
   phone: string | null;
   avatar_url: string | null;
+  whatsapp_notifications_enabled?: boolean;
 }
 
 function initials(name: string) {

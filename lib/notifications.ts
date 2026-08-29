@@ -18,7 +18,7 @@ export async function notifyTaskAssignees(
   if (!assigneeIds.length) return;
 
   const [{ data: members }, { data: client }] = await Promise.all([
-    supabase.from("team_members").select("id, name, phone").in("id", assigneeIds),
+    supabase.from("team_members").select("id, name, phone, whatsapp_notifications_enabled").in("id", assigneeIds),
     task.client_id
       ? supabase.from("clients").select("name").eq("id", task.client_id).single()
       : Promise.resolve({ data: null }),
@@ -28,6 +28,7 @@ export async function notifyTaskAssignees(
 
   for (const member of members ?? []) {
     if (!member.phone) continue;
+    if (member.whatsapp_notifications_enabled === false) continue;
     const phone = member.phone.replace(/[^0-9]/g, "");
     await sendWhatsAppTemplate(phone, "yeni_gorev_bildirimi", [
       member.name,

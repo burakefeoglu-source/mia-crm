@@ -14,11 +14,22 @@ export default async function CalendarPage() {
     .order("shoot_date");
 
   const { data: clients } = await supabase.from("clients").select("id, name").order("name");
-  const { data: members } = await supabase.from("team_members").select("id, name").order("name");
+  const { data: membersRaw } = await supabase.from("team_members").select("id, name").order("name");
+  const { data: leaves } = await supabase.from("team_leaves").select("team_member_id, start_date, end_date");
   const { data: linkedFiles } = await supabase
     .from("linked_files")
     .select("id, entity_id, file_name, file_url")
     .eq("entity_type", "shoot");
+
+  const leavesByMember = (leaves ?? []).reduce<Record<string, { start_date: string; end_date: string }[]>>(
+    (acc, l) => {
+      (acc[l.team_member_id] ??= []).push({ start_date: l.start_date, end_date: l.end_date });
+      return acc;
+    },
+    {}
+  );
+
+  const members = (membersRaw ?? []).map((m) => ({ ...m, leaves: leavesByMember[m.id] ?? [] }));
 
   const filesByShoot = (linkedFiles ?? []).reduce<Record<string, any[]>>((acc, f) => {
     (acc[f.entity_id] ??= []).push(f);
@@ -29,7 +40,7 @@ export default async function CalendarPage() {
     <CalendarClient
       shoots={shoots ?? []}
       clients={clients ?? []}
-      members={members ?? []}
+      members={members}
       filesByShoot={filesByShoot}
     />
   );
