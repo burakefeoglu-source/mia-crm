@@ -11,7 +11,6 @@ import {
   IconUsers,
   IconBrandGoogleDrive,
   IconStar,
-  IconSparkles,
 } from "@tabler/icons-react";
 import { NotificationsBell } from "@/components/NotificationsBell";
 import { ProfileModal } from "@/components/ProfileModal";
@@ -23,7 +22,6 @@ const NAV_ITEMS = [
   { href: "/clients", label: "Müşteriler", icon: IconBuildingStore },
   { href: "/team", label: "Ekip", icon: IconUsers },
   { href: "/influencers", label: "Influencer", icon: IconStar },
-  { href: "/assistant", label: "AI Asistan", icon: IconSparkles },
   { href: "/drive", label: "Drive", icon: IconBrandGoogleDrive },
 ];
 
