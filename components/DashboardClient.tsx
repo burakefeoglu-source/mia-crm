@@ -151,7 +151,7 @@ export function DashboardClient({
         </div>
       </div>
 
-      <div className="w-[260px] shrink-0 bg-white border border-black/5 rounded-2xl p-5 flex flex-col gap-6 h-fit shadow-sm">
+      <div className="w-[260px] shrink-0 bg-white border border-black/5 rounded-2xl p-5 flex flex-col gap-6 h-fit shadow-sm sticky top-8 self-start max-h-[calc(100vh-4rem)] overflow-y-auto">
         {weather && (
           <>
             <div className="flex items-center justify-between">

@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { notifyTaskAssignees } from "@/lib/notifications";
+import { notifyTaskAssignees, createInAppNotifications } from "@/lib/notifications";
 
 export async function createClientAction(formData: FormData) {
   const supabase = createClient();
@@ -148,6 +148,12 @@ export async function createTaskAction(formData: FormData) {
     if (e1) throw new Error(e1.message);
 
     await notifyTaskAssignees(supabase, task, assigneeIds);
+    await createInAppNotifications(supabase, assigneeIds, {
+      type: "task_assigned",
+      title: "Yeni görev atandı",
+      body: task.title,
+      link: "/tasks",
+    });
   }
 
   revalidatePath("/tasks");

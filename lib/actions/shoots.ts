@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { createInAppNotifications } from "@/lib/notifications";
 
 export async function createShootAction(formData: FormData) {
   const supabase = createClient();
@@ -41,6 +42,13 @@ export async function createShootAction(formData: FormData) {
       .from("shoot_team")
       .insert(teamIds.map((team_member_id) => ({ shoot_id: shoot.id, team_member_id })));
     if (e2) throw new Error(e2.message);
+
+    await createInAppNotifications(supabase, teamIds, {
+      type: "shoot_assigned",
+      title: "Yeni çekime atandın",
+      body: shoot.title ?? "İsimsiz çekim",
+      link: "/calendar",
+    });
   }
 
   revalidatePath("/calendar");

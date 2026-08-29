@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { extractTaskFromMessage } from "@/lib/task-extraction";
-import { notifyTaskAssignees } from "@/lib/notifications";
+import { notifyTaskAssignees, createInAppNotifications } from "@/lib/notifications";
 
 const DURATION_PRESET_MINUTES: Record<string, number> = {
   half_day: 240,
@@ -122,6 +122,11 @@ export async function POST(req: NextRequest) {
         supabase,
         task,
         otherAssignees.map((m) => m.id)
+      );
+      await createInAppNotifications(
+        supabase,
+        matchedAssignees.map((m) => m.id),
+        { type: "task_assigned", title: "Yeni görev atandı (WhatsApp)", body: task.title, link: "/tasks" }
       );
     }
 

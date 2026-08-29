@@ -38,3 +38,20 @@ export async function notifyTaskAssignees(
     ]).catch(() => {});
   }
 }
+
+// Görev/çekim atandığında uygulama içi (zil ikonu) bildirim oluşturur.
+export async function createInAppNotifications(
+  supabase: any,
+  assigneeIds: string[],
+  notification: { type: string; title: string; body: string; link: string }
+) {
+  if (!assigneeIds.length) return;
+  const rows = assigneeIds.map((team_member_id) => ({
+    team_member_id,
+    type: notification.type,
+    title: notification.title,
+    body: notification.body,
+    link: notification.link,
+  }));
+  await supabase.from("notifications").insert(rows).select();
+}

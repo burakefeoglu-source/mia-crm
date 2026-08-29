@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   IconLayoutDashboard,
   IconChecklist,
@@ -11,9 +12,9 @@ import {
   IconBrandGoogleDrive,
   IconStar,
   IconSparkles,
-  IconLogout,
 } from "@tabler/icons-react";
-import { createClient } from "@/lib/supabase/client";
+import { NotificationsBell } from "@/components/NotificationsBell";
+import { ProfileModal } from "@/components/ProfileModal";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Panel", icon: IconLayoutDashboard },
@@ -26,16 +27,22 @@ const NAV_ITEMS = [
   { href: "/drive", label: "Drive", icon: IconBrandGoogleDrive },
 ];
 
-export function Sidebar() {
-  const pathname = usePathname();
-  const router = useRouter();
+interface CurrentMember {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  phone: string | null;
+  avatar_url: string | null;
+}
 
-  const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/login");
-    router.refresh();
-  };
+function initials(name: string) {
+  return name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase();
+}
+
+export function Sidebar({ currentMember }: { currentMember: CurrentMember | null }) {
+  const pathname = usePathname();
+  const [profileOpen, setProfileOpen] = useState(false);
 
   return (
     <aside className="w-[200px] shrink-0 bg-white border-r border-black/5 flex flex-col gap-1 p-4">
@@ -63,13 +70,37 @@ export function Sidebar() {
       })}
 
       <div className="flex-1" />
-      <button
-        onClick={handleLogout}
-        className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-black/40 hover:bg-black/5"
-      >
-        <IconLogout size={17} stroke={1.75} />
-        Çıkış yap
-      </button>
+
+      <NotificationsBell memberId={currentMember?.id ?? null} />
+
+      {currentMember ? (
+        <button
+          onClick={() => setProfileOpen(true)}
+          className="flex items-center gap-2 px-2 py-2 rounded-lg text-left hover:bg-black/5"
+        >
+          {currentMember.avatar_url ? (
+            <img
+              src={currentMember.avatar_url}
+              alt={currentMember.name}
+              className="w-7 h-7 rounded-full object-cover shrink-0"
+            />
+          ) : (
+            <div className="w-7 h-7 rounded-full bg-mia-light text-mia text-[10px] font-medium flex items-center justify-center shrink-0">
+              {initials(currentMember.name)}
+            </div>
+          )}
+          <div className="min-w-0">
+            <div className="text-xs font-medium text-black/80 truncate">{currentMember.name}</div>
+            <div className="text-[10px] text-black/40">Profil & ayarlar</div>
+          </div>
+        </button>
+      ) : (
+        <div className="px-2 py-2 text-xs text-black/30">Profil bulunamadı</div>
+      )}
+
+      {profileOpen && currentMember && (
+        <ProfileModal member={currentMember} onClose={() => setProfileOpen(false)} />
+      )}
     </aside>
   );
 }
